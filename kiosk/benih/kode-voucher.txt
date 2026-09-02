@@ -1,24 +1,42 @@
 # Kode Gift Voucher — persediaan awal kiosk.
 #
 # CARA PAKAI
-#   Tempelkan kode produksi di bawah, satu kode satu baris.
-#   Baris kosong dan baris yang diawali # diabaikan.
+#   Satu kode satu baris. Baris kosong dan baris berawalan # diabaikan.
 #
 # KAPAN DIBACA
-#   Sekali saja: waktu kiosk pertama kali dijalankan di sebuah PC dan
-#   persediaan kodenya masih kosong. Menjalankan kiosk berulang kali tidak
-#   mengimpor ulang — kode yang sudah keluar tidak akan pernah kembali
-#   menjadi "belum terpakai" hanya karena kiosk dinyalakan lagi.
+#   Sekali saja: saat kiosk pertama kali jalan di sebuah PC dan persediaan
+#   kodenya masih kosong. Menjalankan kiosk berulang kali tidak mengimpor
+#   ulang — kode yang sudah keluar tidak akan kembali jadi "belum terpakai"
+#   hanya karena kiosk dinyalakan lagi.
 #
-#   Kalau kiosk sudah pernah jalan dan kamu ingin mengganti persediaannya,
-#   pakai halaman Persiapan Acara: kosongkan lalu impor berkas baru.
+#   Kalau kiosk sudah pernah jalan dan persediaannya mau diganti, pakai
+#   halaman Persiapan Acara: kosongkan lalu impor berkas baru.
 #
-# CONTOH
-#   p5ltJ3A3xAQG
-#   p5ltarQWpwGa
+# PERINGATAN
+#   Dua puluh kode di bawah berasal dari berkas "Testing PromoCode Voucher
+#   2026". Namanya menyebut dirinya sendiri: ini kode UJI COBA. Kalau kode
+#   uji ditolak kasir saat acara, tamu sudah pergi membawa struk yang tidak
+#   berlaku dan tidak ada cara menariknya kembali.
 #
-# Kode di bawah ini kosong dengan sengaja. Dua puluh kode uji coba yang
-# dipakai selama pengembangan TIDAK disertakan: kode itu akan ditolak kasir
-# saat acara, dan struk yang membawa kode mati lebih buruk daripada kiosk
-# yang jelas-jelas memberi tahu bahwa persediaannya belum diisi.
+#   Ganti seluruh daftar ini dengan kode produksi sebelum 9 September.
 
+p5ltJ3A3xAQG
+p5ltarQWpwGa
+p5ltgCx2A7Tg
+p5ltMjHtQQ7U
+p5lt6kvxMfna
+p5ltfspPwyDR
+p5ltap7fYXga
+p5ltg43R3pvW
+p5ltV2PYW4yA
+p5lt9unEAqWe
+p5ltYpyqRKkH
+p5ltEmXbuDgX
+p5ltCs92uELM
+p5ltNsmX99ev
+p5ltQHEQdtaD
+p5lthpeEaWkn
+p5ltjVfm2Fah
+p5lt9KHnnjWp
+p5lthKwqHdtt
+p5ltH6eNLCjF

@@ -617,7 +617,35 @@ app.get('/api/promo', (_req, res) => {
  * daripada kode voucher, bukan kurang.
  */
 app.get('/api/basis', butuhSandi, (_req, res) => {
-  res.json({ basis: basis.ringkas() });
+  /*
+   * Keadaan sinkron ikut dikirim, bukan hanya jumlah barisnya.
+   *
+   * "Member di kiosk ini cuma 4.000" bisa berarti dua hal yang sangat berbeda:
+   * server memang baru punya segitu, atau penarikan gagal dan yang terlihat
+   * adalah salinan basi. Tanpa waktu penarikan terakhir dan galatnya, petugas
+   * di lokasi tidak punya cara membedakannya — dan akan menyalahkan datanya,
+   * bukan jaringannya.
+   */
+  res.json({
+    basis: basis.ringkas(),
+    sinkronMember: {
+      waktu: keadaanMember.waktu,
+      galat: keadaanMember.galat,
+      sedang: keadaanMember.sedang,
+      sumber: konf.baseUrl,
+      adaSecret: Boolean(konf.secret),
+    },
+  });
+});
+
+/** Tarik ulang daftar member sekarang juga, tanpa menunggu dua menit. */
+app.post('/api/basis/tarik-member', butuhSandi, async (_req, res) => {
+  await tarikMember();
+  res.json({
+    waktu: keadaanMember.waktu,
+    galat: keadaanMember.galat,
+    total: member.jumlah?.() ?? null,
+  });
 });
 
 app.get('/api/basis/baris', butuhSandi, (req, res) => {

@@ -93,6 +93,27 @@ tr:last-child td { border-bottom: 0; }
 .kaki button:disabled { opacity: .4; }
 
 .catatan { margin-bottom: 1rem; font-size: .86rem; color: var(--tinta-redup); }
+
+.sinkron {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap;
+  margin-bottom: 1rem; padding: .8rem 1rem;
+  border: 1px solid var(--garis); border-radius: .8rem;
+  background: rgba(255,255,255,.7); font-size: .88rem;
+}
+
+.sinkron b { display: block; }
+.sinkron span { color: var(--tinta-redup); font-size: .82rem; }
+.sinkron.baik b { color: var(--aman); }
+.sinkron.buruk b { color: var(--bahaya); }
+
+.sinkron button {
+  height: 2.6rem; padding: 0 1rem; border: 1px solid var(--garis);
+  border-radius: .7rem; background: rgba(255,255,255,.8); color: var(--tinta);
+  font: inherit; font-size: .88rem; font-weight: 600;
+}
+
+.sinkron button:disabled { opacity: .5; }
 .catatan b { color: var(--tinta); }
 </style>
 </head>
@@ -122,6 +143,17 @@ tr:last-child td { border-bottom: 0; }
       Halaman ini <b>hanya membaca</b>. Mengubah dan menghapus tetap lewat halaman
       masing-masing, supaya tidak ada perubahan yang terjadi tanpa konfirmasi.
     </p>
+
+    <!-- Keadaan sinkron member. Jumlah member yang salah hampir selalu soal
+         penarikan yang gagal, bukan soal datanya — jadi sebabnya ditampilkan
+         di sini, bukan disimpan di log yang tidak dibuka siapa pun. -->
+    <div class="sinkron" id="sinkron" hidden>
+      <div>
+        <b id="sinkron-judul">–</b>
+        <span id="sinkron-rinci"></span>
+      </div>
+      <button type="button" id="tarik">Tarik member sekarang</button>
+    </div>
 
     <div class="tab" id="tab" role="tablist"></div>
 
@@ -240,6 +272,8 @@ function muatDaftar() {
       });
     });
 
+    gambarSinkron(d.sinkronMember);
+
     if (!pilihan && d.basis.length && d.basis[0].tabel.length) {
       pilihan = { basis: d.basis[0].kunci, tabel: d.basis[0].tabel[0].nama };
     }
@@ -249,6 +283,53 @@ function muatDaftar() {
     if (e.message !== 'perlu-sandi') document.getElementById('kabar').textContent = 'kiosk tidak merespons';
   });
 }
+
+function gambarSinkron(s) {
+  if (!s) return;
+  var kotak = document.getElementById('sinkron');
+  kotak.hidden = false;
+
+  var judul = document.getElementById('sinkron-judul');
+  var rinci = document.getElementById('sinkron-rinci');
+
+  if (!s.adaSecret) {
+    kotak.className = 'sinkron buruk';
+    judul.textContent = 'SYNC_SECRET kosong — member tidak akan pernah masuk';
+    rinci.textContent = 'Isi SYNC_SECRET di kiosk/.env lalu jalankan ulang kiosk.';
+    return;
+  }
+
+  if (s.galat) {
+    kotak.className = 'sinkron buruk';
+    judul.textContent = 'Penarikan member GAGAL';
+    rinci.textContent = s.galat + ' — sumber: ' + s.sumber;
+    return;
+  }
+
+  kotak.className = 'sinkron baik';
+  judul.textContent = s.sedang ? 'Sedang menarik member…' : 'Member tersinkron';
+  rinci.textContent = s.waktu
+    ? 'terakhir ' + new Date(s.waktu).toLocaleString('id-ID') + ' — sumber: ' + s.sumber
+    : 'belum pernah ditarik';
+}
+
+document.getElementById('tarik').addEventListener('click', function () {
+  var b = this;
+  b.disabled = true;
+  b.textContent = 'Menarik…';
+  fetch('/api/basis/tarik-member', { method: 'POST', headers: { 'x-sandi': karcis || '' } })
+    .then(function (r) { return r.json(); })
+    .then(function (h) {
+      if (h.galat) alert('Gagal menarik member:\n\n' + h.galat);
+      else alert('Selesai. Member sekarang: ' + h.total);
+    })
+    .catch(function () { alert('Kiosk tidak merespons.'); })
+    .finally(function () {
+      b.disabled = false;
+      b.textContent = 'Tarik member sekarang';
+      muatDaftar();
+    });
+});
 
 function tandaiTab() {
   Array.prototype.forEach.call(document.querySelectorAll('#tab button'), function (b) {
