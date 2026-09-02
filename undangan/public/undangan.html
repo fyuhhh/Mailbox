@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Undangan {{JUDUL}} — {{PERUSAHAAN}}</title>
+<meta name="description" content="Undangan digital {{JUDUL}} {{PERUSAHAAN}} — {{TANGGAL}}, {{LOKASI}}.">
+<meta name="theme-color" content="#9278ae">
+<meta property="og:title" content="Undangan {{JUDUL}} — {{PERUSAHAAN}}">
+<meta property="og:description" content="{{TANGGAL}} · {{LOKASI}}">
+<style>
+/* =============================================================================
+   Undangan digital — satu bahasa visual dengan kiosk.
+
+   Palet, skala huruf, dan gambar latarnya sama persis dengan layar kiosk
+   (kiosk/public/gaya.css). Tamu melihat keduanya berturut-turut dalam hitungan
+   menit: memindai QR di depan kiosk, lalu membuka halaman ini di tangannya.
+   Dua tampilan yang berbeda gaya akan terbaca seperti dua acara berbeda.
+
+   Seluruh gaya ditanam di halaman: undangan ini dibuka lewat jaringan seluler
+   di dalam gedung, dan setiap berkas terpisah adalah satu perjalanan bolak-balik
+   tambahan sebelum apa pun muncul di layar.
+   ========================================================================== */
+
+:root {
+  /* Warna dicuplik dari Template Anniv.JPG, sama dengan kiosk. */
+  --ungu-pekat:  #33224d;
+  --ungu-tua:    #4a3568;
+  --ungu:        #6b4e8f;
+  --ungu-muda:   #9278ae;
+  --lavender:    #cbbbdf;
+
+  --tinta:       #33224d;
+  --tinta-redup: #6b5b85;
+  --emas:        #c9a227;
+
+  --kaca:        rgba(255, 255, 255, .66);
+  --kaca-tebal:  rgba(255, 255, 255, .84);
+  --garis:       rgba(74, 53, 104, .18);
+
+  /* Skala huruf sama bentuknya dengan kiosk, hanya diturunkan ke ukuran
+     genggam: kiosk dibaca dari satu meter, halaman ini dari 30 cm. */
+  --t-xs:  0.78rem;
+  --t-sm:  0.92rem;
+  --t-md:  1.05rem;
+  --t-lg:  1.25rem;
+  --t-xl:  1.55rem;
+  --t-2xl: 2rem;
+  --t-3xl: 2.5rem;
+
+  --b-normal: 400;
+  --b-tegas:  600;
+  --b-judul:  800;
+
+  --s-1: .4rem;  --s-2: .8rem;  --s-3: 1.2rem;
+  --s-4: 1.8rem; --s-5: 2.6rem; --s-6: 3.6rem;
+
+  --sudut:   .7rem;
+  --sudut-l: 1.2rem;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* Warna cadangan dipasang di html, bukan body.
+   Body memakai gambar sebagai latarnya sendiri; kalau warna itu tetap di body,
+   ia menimpa gambar dan yang tampil hanya bidang ungu rata. */
+html { background: var(--ungu-tua); }
+
+body {
+  min-height: 100vh;
+  /* Gambar ditempel langsung ke body, bukan lewat pseudo-elemen ber-z-index
+     negatif — pseudo-elemen semacam itu tersembunyi di belakang latar induknya
+     sendiri, dan itulah yang membuat gambarnya tidak muncul sama sekali. */
+  /*
+     * Alamat ABSOLUT, bukan relatif.
+     *
+     * Halaman ini disajikan di /U/<kode>, sehingga "latar.jpg" diselesaikan
+     * peramban menjadi /U/latar.jpg — folder yang tidak pernah ada. Gambarnya
+     * gagal diam-diam dan yang tampil hanya bidang ungu rata; tidak ada galat
+     * di mana pun, karena gambar latar yang hilang memang tidak melapor.
+     */
+    background: url("/latar.jpg") top center / cover no-repeat fixed;
+  color: var(--tinta);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: var(--t-md);
+  line-height: 1.55;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Latar dipasang tetap dan disejajarkan ke atas.
+ *
+ * Logo ONE7ELEVEN ada di bagian atas gambar; `top center` menjaga logo tetap
+ * utuh dan memindahkan pemangkasan ke bawah. `fixed` membuatnya diam saat
+ * halaman digulir, sehingga logonya tidak ikut naik hilang.
+ */
+/* Tabir putih lembut supaya teks tetap terbaca di atas motif logam yang
+   berpindah dari ungu pekat di tepi ke perak terang di tengah. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(85% 55% at 50% 40%, rgba(255,255,255,.62), rgba(255,255,255,0) 78%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bingkai {
+  position: relative;
+  z-index: 1;
+  max-width: 30rem;
+  margin: 0 auto;
+  /* Ruang bebas untuk logo yang menyatu di gambar latar. */
+  padding: 24vh var(--s-3) var(--s-6);
+}
+
+/* --------------------------------- hero ---------------------------------- */
+
+.hero { text-align: center; }
+
+.kelir {
+  font-size: var(--t-xs);
+  font-weight: var(--b-tegas);
+  letter-spacing: .3em;
+  text-transform: uppercase;
+  color: var(--ungu);
+}
+
+.nama {
+  margin-top: var(--s-1);
+  font-size: var(--t-3xl);
+  font-weight: var(--b-judul);
+  line-height: 1.12;
+  letter-spacing: -.01em;
+  color: var(--ungu-pekat);
+  overflow-wrap: anywhere;
+}
+
+.acara {
+  margin-top: var(--s-3);
+  font-size: var(--t-lg);
+  font-weight: var(--b-judul);
+  color: var(--ungu-tua);
+}
+
+.perusahaan {
+  margin-top: var(--s-1);
+  font-size: var(--t-xs);
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--ungu);
+}
+
+/* -------------------------------- kartu ---------------------------------- */
+
+.kartu {
+  margin-top: var(--s-4);
+  padding: var(--s-4);
+  border: 1px solid var(--garis);
+  border-radius: var(--sudut-l);
+  background: var(--kaca-tebal);
+  backdrop-filter: blur(1rem) saturate(1.1);
+  box-shadow: 0 1rem 2.5rem -1rem rgba(51, 34, 77, .3);
+}
+
+.kartu-video { text-align: center; }
+
+.video-judul {
+  margin-bottom: var(--s-2);
+  font-size: var(--t-sm);
+  font-weight: var(--b-tegas);
+  color: var(--ungu);
+}
+
+.kartu-video video {
+  width: 100%;
+  border-radius: var(--sudut);
+  background: #000;
+}
+
+/* ------------------------------ hitung mundur ---------------------------- */
+
+.mundur {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--s-1);
+  margin-top: var(--s-4);
+  text-align: center;
+}
+
+.mundur div {
+  padding: var(--s-2) var(--s-1);
+  border: 1px solid var(--garis);
+  border-radius: var(--sudut);
+  background: var(--kaca);
+  backdrop-filter: blur(.6rem);
+}
+
+.mundur b {
+  display: block;
+  font-size: var(--t-xl);
+  font-weight: var(--b-judul);
+  font-variant-numeric: tabular-nums;
+  color: var(--ungu-pekat);
+}
+
+.mundur span {
+  font-size: var(--t-xs);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ungu);
+}
+
+/* -------------------------------- rincian -------------------------------- */
+
+.rincian { display: grid; gap: var(--s-3); }
+
+.baris { display: flex; gap: var(--s-2); align-items: flex-start; }
+
+/*
+ * Ikon digambar sebagai vektor, bukan emoji — sama seperti di kiosk. Emoji
+ * dirender sistem operasi: bentuk dan warnanya berbeda di tiap ponsel, dan
+ * tidak satu pun mengikuti palet acara.
+ */
+.ikon {
+  flex: 0 0 auto;
+  width: 2.1rem;
+  height: 2.1rem;
+  display: grid;
+  place-items: center;
+  color: var(--ungu);
+}
+
+.ikon svg { width: 100%; height: 100%; }
+
+.baris dt {
+  font-size: var(--t-xs);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ungu);
+}
+
+.baris dd {
+  font-size: var(--t-md);
+  font-weight: var(--b-judul);
+  color: var(--ungu-pekat);
+}
+
+.baris dd small {
+  display: block;
+  font-size: var(--t-sm);
+  font-weight: var(--b-normal);
+  color: var(--tinta-redup);
+}
+
+/* -------------------------------- tombol --------------------------------- */
+
+.tombol-tumpuk { display: grid; gap: var(--s-2); margin-top: var(--s-4); }
+
+.tombol {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 3rem melewati ambang 44 px untuk sasaran sentuh; tamu membukanya sambil
+     berdiri, sering sambil memegang struk. */
+  min-height: 3rem;
+  padding: var(--s-2) var(--s-3);
+  border: none;
+  border-radius: var(--sudut);
+  font: inherit;
+  font-size: var(--t-md);
+  font-weight: var(--b-judul);
+  text-decoration: none;
+  text-align: center;
+}
+
+.tombol-utama {
+  background: linear-gradient(180deg, #e8c65c, var(--emas));
+  color: #241a02;
+  box-shadow: 0 .5rem 1.5rem -.5rem rgba(201, 162, 39, .6);
+}
+
+.tombol-sunyi {
+  border: 1.5px solid var(--garis);
+  background: rgba(255, 255, 255, .5);
+  color: var(--ungu-tua);
+}
+
+/* --------------------------------- kaki ---------------------------------- */
+
+.kaki {
+  margin-top: var(--s-5);
+  text-align: center;
+  font-size: var(--t-sm);
+  color: var(--tinta-redup);
+}
+
+.kode {
+  display: inline-block;
+  margin-top: var(--s-2);
+  padding: var(--s-1) var(--s-3);
+  border: 1px solid var(--garis);
+  border-radius: var(--sudut);
+  background: var(--kaca);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-weight: var(--b-judul);
+  letter-spacing: .28em;
+  text-indent: .28em;
+  color: var(--ungu-pekat);
+}
+
+[hidden] { display: none !important; }
+
+.muncul { animation: naik .6s cubic-bezier(.2,.7,.3,1) both; }
+.muncul:nth-child(2) { animation-delay: .07s; }
+.muncul:nth-child(3) { animation-delay: .14s; }
+.muncul:nth-child(4) { animation-delay: .21s; }
+
+@keyframes naik { from { opacity: 0; transform: translateY(1rem); } to { opacity: 1; transform: none; } }
+
+/* Sebagian orang pusing karena gerakan; undangan bukan tempat memaksakan itu. */
+@media (prefers-reduced-motion: reduce) { .muncul { animation: none; } }
+
+/* Layar pendek: ruang untuk logo dikurangi agar isinya tidak terdorong jauh
+   ke bawah lipatan. */
+@media (max-height: 700px) { .bingkai { padding-top: 18vh; } }
+</style>
+</head>
+<body>
+
+<div class="bingkai">
+
+  <header class="hero muncul">
+    <p class="kelir" id="kelir">Undangan Untuk</p>
+    <h1 class="nama" id="nama">{{NAMA}}</h1>
+    <p class="acara">{{JUDUL}}</p>
+    <p class="perusahaan">{{PERUSAHAAN}}</p>
+  </header>
+
+  <section class="kartu muncul kartu-video" id="kartu-video" hidden>
+    <p class="video-judul">Video ucapan dari <span id="video-nama"></span></p>
+    <!-- playsinline mencegah iOS mengambil alih layar penuh saat diputar, yang
+         akan menyembunyikan sisa undangan di baliknya. -->
+    <video id="video-greeting" controls playsinline preload="metadata"></video>
+  </section>
+
+
+  <section class="mundur muncul" id="mundur" hidden aria-label="Hitung mundur menuju acara">
+    <div><b id="m-hari">0</b><span>Hari</span></div>
+    <div><b id="m-jam">0</b><span>Jam</span></div>
+    <div><b id="m-menit">0</b><span>Menit</span></div>
+    <div><b id="m-detik">0</b><span>Detik</span></div>
+  </section>
+
+  <section class="kartu muncul">
+    <dl class="rincian">
+      <div class="baris">
+        <div class="ikon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+               stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="5" width="18" height="16" rx="2.5"/>
+            <path d="M3 10h18M8 3v4M16 3v4"/>
+          </svg>
+        </div>
+        <div><dt>Tanggal</dt><dd>{{TANGGAL}}<small>{{JAM}}</small></dd></div>
+      </div>
+      <div class="baris">
+        <div class="ikon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11Z"/>
+            <circle cx="12" cy="10" r="2.6"/>
+          </svg>
+        </div>
+        <div><dt>Lokasi</dt><dd>{{LOKASI}}<small>{{ALAMAT}}</small></dd></div>
+      </div>
+    </dl>
+
+    <div class="tombol-tumpuk">
+      <a class="tombol tombol-utama" id="tombol-peta" href="{{PETA_URL}}" target="_blank" rel="noopener">
+        Lihat Lokasi di Peta
+      </a>
+      <button class="tombol tombol-sunyi" id="tombol-kalender" type="button">
+        Simpan ke Kalender
+      </button>
+    </div>
+  </section>
+
+  <footer class="kaki">
+    <p>Tunjukkan halaman ini saat tiba di lokasi.</p>
+    <p class="kode" id="kode-kaki" hidden>{{KODE}}</p>
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var data = {{DATA_JSON}};
+
+  /* ------------------------------------------------------------------------
+     Kode yang tidak dikenal tetap mendapat undangan utuh, hanya tanpa sapaan.
+     Ini terjadi pada dua keadaan yang sama-sama wajar: kiosk belum sempat
+     mengunggah datanya karena internet di lokasi sedang putus, atau tamu
+     mengetik ulang kodenya dan salah satu huruf. Menampilkan halaman galat
+     pada keduanya akan membuat tamu mengira acaranya batal.
+     --------------------------------------------------------------------- */
+  if (data.dikenali && data.nama) {
+    document.getElementById('kode-kaki').hidden = false;
+
+    if (data.videoUrl) {
+      document.getElementById('kartu-video').hidden = false;
+      document.getElementById('video-nama').textContent = data.nama;
+      // src dipasang di sini, bukan di atribut HTML, supaya peramban tidak
+      // mulai mengunduh video untuk undangan yang ternyata tidak punya rekaman.
+      document.getElementById('video-greeting').src = data.videoUrl;
+    }
+
+  } else {
+    document.getElementById('kelir').textContent = 'Undangan Terbuka';
+    document.getElementById('nama').textContent = 'Anda Diundang';
+  }
+
+  if (data.jenis === 'voucher') {
+    document.getElementById('kelir').textContent = 'Voucher PAM-PLUS untuk';
+  }
+
+  /* ----------------------------- hitung mundur -------------------------- */
+
+  var mulai = data.mulaiIso ? new Date(data.mulaiIso) : null;
+
+  if (mulai && !isNaN(mulai)) {
+    var kotak = document.getElementById('mundur');
+    var bagian = {
+      hari: document.getElementById('m-hari'),
+      jam: document.getElementById('m-jam'),
+      menit: document.getElementById('m-menit'),
+      detik: document.getElementById('m-detik')
+    };
+
+    var tik = function () {
+      var sisa = mulai - new Date();
+      if (sisa <= 0) {
+        kotak.hidden = true;
+        return true;
+      }
+      kotak.hidden = false;
+      var detik = Math.floor(sisa / 1000);
+      bagian.hari.textContent = Math.floor(detik / 86400);
+      bagian.jam.textContent = Math.floor(detik / 3600) % 24;
+      bagian.menit.textContent = Math.floor(detik / 60) % 60;
+      bagian.detik.textContent = detik % 60;
+      return false;
+    };
+
+    if (!tik()) {
+      var jam = setInterval(function () { if (tik()) clearInterval(jam); }, 1000);
+    }
+  }
+
+  /* ------------------------------- kalender ------------------------------ */
+
+  document.getElementById('tombol-kalender').addEventListener('click', function () {
+    if (!mulai || isNaN(mulai)) {
+      alert('Jadwal acara belum tersedia.');
+      return;
+    }
+
+    var selesai = new Date(mulai.getTime() + 4 * 3600 * 1000);
+    var cap = function (d) { return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); };
+    var aman = function (t) { return String(t || '').replace(/([,;\\])/g, '\\$1').replace(/\n/g, '\\n'); };
+
+    var ics = [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//undangan//ID',
+      'BEGIN:VEVENT',
+      'UID:' + (data.kode || 'umum') + '@undangan',
+      'DTSTAMP:' + cap(new Date()),
+      'DTSTART:' + cap(mulai),
+      'DTEND:' + cap(selesai),
+      'SUMMARY:' + aman(data.judul + ' — ' + data.perusahaan),
+      'LOCATION:' + aman(data.lokasi + ', ' + data.alamat),
+      'END:VEVENT', 'END:VCALENDAR'
+    ].join('\r\n');
+
+    var blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    var tautan = document.createElement('a');
+    tautan.href = URL.createObjectURL(blob);
+    tautan.download = 'undangan.ics';
+    document.body.appendChild(tautan);
+    tautan.click();
+    document.body.removeChild(tautan);
+    setTimeout(function () { URL.revokeObjectURL(tautan.href); }, 1000);
+  });
+
+  // Sembunyikan tombol peta bila alamatnya belum diisi, daripada mengirim tamu
+  // ke halaman peta kosong.
+  var peta = document.getElementById('tombol-peta');
+  if (!peta.getAttribute('href')) peta.hidden = true;
+})();
+</script>
+
+</body>
+</html>

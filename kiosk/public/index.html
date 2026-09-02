@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Kiosk Undangan</title>
+<link rel="stylesheet" href="gaya.css">
+<script>
+  /*
+   * Pasang putaran layar sebelum apa pun digambar.
+   *
+   * Nilai sebenarnya datang dari server beberapa ratus milidetik kemudian.
+   * Tanpa baris ini, setiap pemuatan ulang menampilkan layar tegak lalu
+   * berkedip miring — di TV yang digantung tetap, itu terlihat seperti
+   * perangkat yang rusak, dan petugas akan mencoba "memperbaikinya".
+   */
+  try {
+    var putar = localStorage.getItem('putarLayar');
+    if (putar === '90' || putar === '270') document.documentElement.dataset.putar = putar;
+  } catch (e) {}
+</script>
+</head>
+<body>
+
+<!-- Lampu status untuk petugas. Sengaja kecil dan di pojok atas: tamu tidak
+     perlu melihatnya, petugas perlu tahu sekilas tanpa mendekat. -->
+<button id="lampu" class="lampu" aria-label="Status perangkat"><span class="titik"></span></button>
+
+<main id="panggung" class="panggung">
+
+  <!-- ================= PILIH JALUR ================= -->
+  <section class="layar" data-layar="pilih">
+    <div class="zona-pajang">
+      <p class="kelir">Selamat Datang di</p>
+      <h1 class="judul" id="judul-acara-pilih">HUT PERUSAHAAN</h1>
+      <p class="ajakan" id="ajakan-pilih">Rekam video ucapanmu untuk <b>EWALK</b><br>dan bawa pulang undanganmu sendiri</p>
+      <p class="sisa-voucher" id="sisa-voucher" hidden></p>
+    </div>
+
+    <div class="zona-sentuh zona-pilih">
+      <button class="kartu-pilih kartu-pilih-utama" id="kartu-tamu" data-aksi="jalur-tamu">
+        <span class="kartu-ikon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 20h16"/>
+            <path d="M15.5 4.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/>
+          </svg>
+        </span>
+        <span class="kartu-teks">
+          <b>Isi Nama</b>
+          <small>Untuk semua tamu &mdash; rekam video, dapat undangan digital</small>
+        </span>
+      </button>
+
+      <button class="kartu-pilih" data-aksi="jalur-member">
+        <span class="kartu-ikon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+               stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2.5" y="5" width="19" height="14" rx="2.5"/>
+            <path d="M2.5 10h19"/>
+            <path d="M6.5 15h4"/>
+          </svg>
+        </span>
+        <span class="kartu-teks">
+          <b>Member PAM&#8209;PLUS</b>
+          <small>Tekan di sini jika kamu sudah memiliki member &mdash; kamu dapat voucher, bukan undangan</small>
+        </span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ================= PINDAI KARTU MEMBER ================= -->
+  <section class="layar" data-layar="member" hidden>
+    <div class="zona-pajang">
+      <p class="kelir">Member PAM-PLUS</p>
+      <h1 class="judul judul-kecil">Tunjukkan QR-mu</h1>
+      <p class="ajakan" id="member-petunjuk">Arahkan QR profil PAM-PLUS ke kamera</p>
+      <p class="sisa-voucher" id="sisa-voucher-member" hidden></p>
+    </div>
+
+    <div class="zona-sentuh zona-member">
+      <div class="kamera-member">
+        <video id="video-member" playsinline muted></video>
+        <div class="bidik"><span></span><span></span><span></span><span></span></div>
+        <canvas id="kanvas-member" hidden></canvas>
+        <div class="tirai-kamera" id="tirai-member"><p class="tirai-pesan" id="tirai-member-pesan">Menyiapkan kamera…</p></div>
+      </div>
+      <div class="aksi">
+        <button class="tombol tombol-sunyi" data-aksi="batal-member">← Kembali</button>
+        <button class="tombol tombol-sunyi" data-aksi="lewati-member">Ketik Manual</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ KONFIRMASI DATA MEMBER ============ -->
+  <section class="layar" data-layar="konfirmasi" hidden>
+    <div class="zona-pajang">
+      <p class="kelir">QR terbaca</p>
+      <h1 class="judul judul-kecil" id="konf-nama"></h1>
+      <p class="ajakan">Pastikan datamu benar sebelum lanjut.</p>
+    </div>
+
+    <div class="zona-sentuh">
+      <dl class="rincian-konf">
+        <div><dt>Nama</dt><dd id="konf-nama-nilai">–</dd></div>
+        <div><dt>Nomor Member</dt><dd id="konf-id">–</dd></div>
+        <div><dt>Nomor HP</dt><dd id="konf-hp">–</dd></div>
+      </dl>
+
+      <div class="aksi">
+        <button class="tombol tombol-sunyi" data-aksi="konf-salah">Bukan Saya</button>
+        <button class="tombol tombol-utama" data-aksi="konf-benar">Benar, Lanjut →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= LANGKAH 1 — NAMA ================= -->
+  <section class="layar" data-layar="nama" hidden>
+    <div class="zona-pajang">
+      <p class="kelir">Selamat Datang di</p>
+      <h1 class="judul" id="judul-acara">HUT PERUSAHAAN</h1>
+      <p class="ajakan">Ketik namamu untuk mendapatkan<br><b>undangan digital</b>-mu sendiri</p>
+    </div>
+
+    <div class="zona-sentuh">
+      <label class="label" for="isian-nama">Nama kamu</label>
+      <output class="isian" id="isian-nama" data-kosong="Ketuk huruf di bawah…"></output>
+      <div class="sisa" id="sisa-nama"></div>
+      <div class="papan" data-papan="nama"></div>
+      <div class="aksi">
+        <button class="tombol tombol-sunyi" data-aksi="kembali-pilih">← Kembali</button>
+        <button class="tombol tombol-sunyi" data-aksi="bersih">Hapus semua</button>
+        <button class="tombol tombol-utama" data-aksi="lanjut" disabled>Lanjut →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= LANGKAH 2 — PESAN ================= -->
+
+  <!-- ================= SIAP-SIAP ================= -->
+  <section class="layar" data-layar="siap" hidden>
+    <div class="zona-pajang">
+      <p class="kelir">Sebentar lagi</p>
+      <h1 class="judul judul-kecil" id="siap-sapaan"></h1>
+      <p class="ajakan">Siapkan video ucapanmu untuk <b>EWALK</b>.<br>
+        Kamera akan merekam <b><span id="teks-durasi">15</span> detik</b> setelah hitungan mundur.</p>
+    </div>
+
+    <div class="zona-sentuh zona-siap">
+      <div class="lingkar-waktu">
+        <span class="lingkar-angka" id="siap-sisa">60</span>
+        <span class="lingkar-label">detik persiapan</span>
+      </div>
+      <p class="petunjuk-kecil">Tidak perlu menunggu — tekan tombol di bawah kalau sudah siap.</p>
+      <div class="aksi">
+        <button class="tombol tombol-sunyi" data-aksi="batal-rekam">← Kembali</button>
+        <button class="tombol tombol-utama" data-aksi="mulai-rekam">Saya Siap, Mulai!</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= MEREKAM ================= -->
+  <section class="layar layar-rekam" data-layar="rekam" hidden>
+    <div class="panggung-rekam">
+      <video id="video-rekam" playsinline muted></video>
+
+      <div class="lapis-rekam">
+        <div class="aba-aba" id="aba-aba" hidden><span id="aba-angka">5</span></div>
+
+        <div class="tanda-rekam" id="tanda-rekam" hidden>
+          <span class="titik-rekam"></span>
+          <span id="rekam-sisa">15</span>
+        </div>
+
+        <div class="bilah-rekam"><i id="bilah-isi"></i></div>
+        <p class="ajakan ajakan-rekam" id="rekam-pesan">Bersiap…</p>
+
+        <button class="tombol tombol-utama tombol-selesai-rekam"
+                id="selesai-rekam" data-aksi="selesai-rekam" hidden disabled>
+          Selesai
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= TINJAU REKAMAN ================= -->
+  <section class="layar" data-layar="tinjau" hidden>
+    <div class="zona-pajang zona-pajang-tinjau">
+      <p class="kelir">Rekamanmu</p>
+      <h1 class="judul judul-kecil" id="tinjau-sapaan"></h1>
+      <p class="ajakan">Sudah bagus? Kirim dan strukmu akan tercetak.</p>
+    </div>
+
+    <div class="zona-sentuh zona-tinjau">
+      <div class="bingkai-pemutar"><video id="video-tinjau" class="pemutar" controls playsinline></video></div>
+      <p class="petunjuk-kecil" id="tinjau-status"></p>
+      <div class="aksi">
+        <button class="tombol tombol-sunyi" data-aksi="ulangi-rekam">Rekam Ulang</button>
+        <button class="tombol tombol-utama" data-aksi="kirim-rekaman">Kirim &amp; Cetak</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= MEMPROSES ================= -->
+  <section class="layar layar-tengah" data-layar="proses" hidden>
+    <div class="pemintal"></div>
+    <h2 class="judul-sedang">Mencetak undanganmu…</h2>
+    <p class="ajakan">Ambil struk yang keluar dari mesin</p>
+  </section>
+
+  <!-- ================= HASIL ================= -->
+  <section class="layar" data-layar="hasil" hidden>
+    <div class="zona-pajang zona-pajang-hasil">
+      <p class="kelir" id="hasil-kelir">Undangan untuk</p>
+      <h1 class="judul" id="hasil-nama"></h1>
+      <p class="ajakan" id="hasil-catatan">Ambil strukmu, lalu pindai QR-nya</p>
+    </div>
+
+    <div class="zona-sentuh zona-hasil">
+      <div class="kartu-qr">
+        <img id="hasil-qr" alt="Kode QR undangan" width="512" height="512">
+        <p class="kode-tampil" id="hasil-kode"></p>
+      </div>
+      <p class="petunjuk-qr">Struk gagal keluar? <b>Pindai langsung dari layar ini.</b></p>
+      <div class="aksi">
+        <button class="tombol tombol-sunyi" data-aksi="cetak-ulang">Cetak Ulang</button>
+        <button class="tombol tombol-utama" data-aksi="selesai">Selesai <span id="hitung-mundur"></span></button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Panel petugas. Tersembunyi sampai lampu status diketuk tiga kali —
+     tamu tidak boleh menemukannya secara tidak sengaja. -->
+<div class="tirai" id="tirai" hidden>
+  <div class="panel">
+    <h2>Panel Petugas</h2>
+    <dl class="rincian" id="rincian-status"></dl>
+    <h3 class="panel-subjudul">Pengaturan Waktu</h3>
+    <div class="setelan" id="setelan"></div>
+
+    <h3 class="panel-subjudul">Halaman Petugas</h3>
+    <div class="panel-tautan">
+      <a href="/scan.html">Check-in Tamu</a>
+      <a href="/rekaman.html">Rekaman Tersimpan</a>
+      <a href="/member.html">Data Member</a>
+      <a href="/voucher.html">Persiapan Acara</a>
+    </div>
+
+    <div class="panel-aksi">
+      <button class="tombol tombol-sunyi" data-aksi="pulihkan-printer">Pulihkan Printer</button>
+      <button class="tombol tombol-utama" data-aksi="tutup-panel">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<script src="/vendor/jsQR.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,189 @@
+/* =============================================================================
+   Stasiun check-in.
+
+   Berbeda dari layar kiosk, halaman ini dipakai PETUGAS di laptop biasa, bukan
+   tamu di layar 43". Karena itu ia memakai satuan responsif normal dan boleh
+   digulir — bukan tata letak terkunci yang diikat ke satu rasio layar.
+   ========================================================================== */
+
+/*
+ * Halaman petugas memakai bidang terang polos, bukan gambar acara.
+ *
+ * Keduanya dipakai sambil bekerja — memindai kartu di pintu, memeriksa
+ * rekaman di sela antrean. Motif logam yang bagus di layar tamu justru
+ * menurunkan keterbacaan teks kecil dan daftar panjang di sini.
+ */
+.badan-scan {
+  height: auto;
+  min-height: 100vh;
+  overflow-y: auto;
+  font-size: 16px;
+  background: linear-gradient(180deg, #f4f1f9, #e6e1f0);
+  color: var(--tinta);
+}
+
+/* gaya.css mengikat ukuran font akar ke viewport untuk layar 43". Di laptop
+   itu menghasilkan teks raksasa, jadi di halaman ini ikatan tersebut dilepas. */
+.badan-scan,
+.badan-scan .tombol {
+  font-size: 1rem;
+}
+
+html:has(.badan-scan) { font-size: 16px; }
+
+.kepala {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.4rem;
+  border-bottom: 1px solid var(--garis);
+  background: var(--kaca-tebal);
+}
+
+.kepala-judul { font-size: 1.15rem; font-weight: 700; }
+.kepala-sub { font-size: .85rem; color: var(--tinta-redup); }
+
+.tombol-kecil {
+  padding: .5rem .9rem;
+  border: 1px solid var(--garis);
+  border-radius: .6rem;
+  color: var(--tinta-redup);
+  font-size: .85rem;
+  text-decoration: none;
+}
+
+.panggung-scan {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 1.2rem 1.2rem 3rem;
+  display: grid;
+  gap: 1.2rem;
+}
+
+/* --------------------------------- kamera --------------------------------- */
+
+.kamera {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: 1rem;
+  overflow: hidden;
+  background: #000;
+  border: 1px solid var(--garis);
+}
+
+.kamera video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Dicerminkan agar gerakan tangan petugas terasa wajar, seperti melihat
+     cermin. Ini murni tampilan: yang dibaca pemindai adalah bingkai asli dari
+     kanvas, sehingga QR tidak ikut terbalik. */
+  transform: scaleX(-1);
+}
+
+/* .bidik dan .tirai-kamera didefinisikan di gaya.css — dipakai bersama
+   layar pindai kartu member di kiosk. */
+
+.tirai-pesan { font-size: .95rem; }
+.tirai-kamera .tombol { height: 3rem; padding: 0 1.5rem; font-size: 1rem; }
+
+/* --------------------------------- hasil ---------------------------------- */
+
+.hasil {
+  padding: 1.1rem 1.3rem;
+  border: 1px solid var(--garis);
+  border-left-width: 5px;
+  border-radius: .9rem;
+  background: var(--kaca-tebal);
+  transition: border-color .2s, background .2s;
+}
+
+.hasil-label {
+  font-size: .72rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--tinta-redup);
+}
+
+.hasil-nama {
+  margin-top: .25rem;
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.hasil-detail { margin-top: .3rem; font-size: .88rem; color: var(--tinta-redup); }
+
+/* Empat keadaan dibedakan oleh warna DAN kata, tidak pernah oleh warna saja:
+   pintu masuk acara sering remang, dan sebagian orang tidak membedakan merah
+   dari hijau. */
+.hasil[data-status="siaga"] { border-left-color: var(--garis); }
+.hasil[data-status="baru"]  { border-left-color: var(--aman);  background: rgba(74,222,128,.08); }
+.hasil[data-status="ulang"] { border-left-color: var(--emas);  background: rgba(233,185,73,.08); }
+.hasil[data-status="asing"] { border-left-color: var(--bahaya); background: rgba(255,107,107,.08); }
+
+.hasil[data-status="baru"]  .hasil-nama { color: var(--aman); }
+.hasil[data-status="ulang"] .hasil-nama { color: var(--emas); }
+.hasil[data-status="asing"] .hasil-nama { color: var(--bahaya); }
+
+/* --------------------------------- manual --------------------------------- */
+
+.manual label {
+  display: block;
+  margin-bottom: .45rem;
+  font-size: .72rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--tinta-redup);
+}
+
+.manual-baris { display: flex; gap: .6rem; }
+
+.manual input {
+  flex: 1;
+  min-width: 0;
+  height: 3rem;
+  padding: 0 1rem;
+  border: 1px solid var(--garis);
+  border-radius: .7rem;
+  background: rgba(0,0,0,.3);
+  color: var(--tinta);
+  font: inherit;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.manual input:focus { outline: 2px solid var(--emas); outline-offset: 1px; }
+.manual .tombol { flex: 0 0 auto; height: 3rem; padding: 0 1.2rem; font-size: .95rem; }
+
+/* -------------------------------- riwayat --------------------------------- */
+
+.riwayat h2 {
+  margin-bottom: .6rem;
+  font-size: .72rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--tinta-redup);
+}
+
+.riwayat-daftar { list-style: none; display: grid; gap: .4rem; }
+
+.riwayat-daftar li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .8rem;
+  padding: .6rem .9rem;
+  border: 1px solid var(--garis);
+  border-radius: .6rem;
+  font-size: .92rem;
+}
+
+.riwayat-kosong { color: var(--tinta-redup); justify-content: center !important; }
+.riwayat-jam { color: var(--tinta-redup); font-size: .8rem; font-variant-numeric: tabular-nums; }
+.riwayat-daftar li[data-status="ulang"] { border-color: rgba(233,185,73,.4); }
+.riwayat-daftar li[data-status="asing"] { border-color: rgba(255,107,107,.4); }

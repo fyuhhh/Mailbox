@@ -1,0 +1,1180 @@
+/* =============================================================================
+   Kiosk layar 43" portrait.
+
+   SATU SATUAN UNTUK SEMUANYA
+   Layar kiosk hanya satu perangkat dengan satu rasio, jadi tidak ada breakpoint
+   di berkas ini. Sebagai gantinya `html` diberi ukuran font yang mengikuti
+   viewport, dan seluruh ukuran lain dinyatakan dalam rem. Hasilnya tata letak
+   yang identik di 1080x1920 maupun 2160x3840 tanpa satu pun media query, dan
+   bisa diuji di laptop hanya dengan mengecilkan jendela ke rasio 9:16.
+
+   Pembagi 46/82 mendekati rasio 9:16 (46 x 16/9 = 82), sehingga `min()` di
+   bawah menghasilkan angka yang sama dari kedua sisi pada layar portrait yang
+   benar, dan otomatis mengecil mengikuti sisi yang lebih sempit pada layar
+   yang rasionya meleset.
+   ========================================================================== */
+
+/*
+ * Palet diambil langsung dari Template Anniv.JPG dengan mencuplik piksel
+ * aslinya, bukan dikira-kira: tengah #d6d4e6, tepi atas #9278ae, tepi bawah
+ * #9496bd, rerata #aca4ca. Latarnya TERANG di tengah dan ungu di tepi —
+ * kebalikan dari tema gelap sebelumnya, jadi seluruh arah kontras dibalik:
+ * tinta gelap di atas bidang terang, bukan tinta terang di atas bidang gelap.
+ */
+:root {
+  --ungu-pekat:   #33224d;
+  --ungu-tua:     #4a3568;
+  --ungu:         #6b4e8f;
+  --ungu-muda:    #9278ae;
+  --lavender:     #cbbbdf;
+  --perak:        #d6d4e6;
+
+  --tinta:        #33224d;   /* teks utama di atas bidang terang */
+  --tinta-redup:  #6b5b85;
+  --tinta-balik:  #f6f3fb;   /* teks di atas bidang ungu pekat */
+
+  --emas:         #c9a227;   /* dari tulisan ONE di logo */
+  --emas-terang:  #e8c65c;
+
+  --kaca:         rgba(255, 255, 255, .62);
+  --kaca-tebal:   rgba(255, 255, 255, .82);
+  --garis:        rgba(74, 53, 104, .22);
+
+  --bahaya:       #c2384b;
+  --aman:         #2f7d51;
+
+  /* ------------------------------------------------------------------ skala
+   * SATU skala untuk seluruh kiosk.
+   *
+   * Sebelumnya ada 21 ukuran font berbeda dan 5 bobot huruf, tumbuh satu per
+   * satu setiap kali ada yang disetel. Hasilnya tidak pernah terlihat sengaja:
+   * dua tulisan yang seharusnya setara tampil sedikit berbeda, dan mata membaca
+   * selisih kecil itu sebagai kecerobohan.
+   *
+   * Tujuh langkah dengan rasio tetap ~1,25. Setiap teks harus memakai salah
+   * satunya — tidak ada nilai lepas.
+   */
+  --t-xs:  0.95rem;
+  --t-sm:  1.2rem;
+  --t-md:  1.5rem;
+  --t-lg:  1.9rem;
+  --t-xl:  2.4rem;
+  --t-2xl: 3rem;
+  --t-3xl: 3.8rem;
+
+  /* Angka hitung mundur berdiri sendiri: ia bukan teks yang dibaca melainkan
+     penanda yang dilihat dari seberang ruangan, jadi tidak ikut skala baca. */
+  --t-angka: 15rem;
+
+  /* Tiga bobot saja: badan, penegas, judul. */
+  --b-normal: 400;
+  --b-tegas:  600;
+  --b-judul:  800;
+
+  /* Jarak dan sudut ikut satu tangga yang sama. */
+  --s-1: 0.4rem;
+  --s-2: 0.8rem;
+  --s-3: 1.2rem;
+  --s-4: 1.8rem;
+  --s-5: 2.6rem;
+  --s-6: 3.6rem;
+
+  --sudut:    0.7rem;
+  --sudut-l:  1.2rem;
+  --sudut-pil: 99rem;   /* bentuk pil, bukan kartu */
+}
+
+html {
+  font-size: min(100vw / 46, 100vh / 82);
+}
+
+/*
+ * TV LANDSCAPE YANG DIPASANG MIRING
+ *
+ * TV 43" di acara ini tidak punya pilihan rotasi layar: sinyal masuknya tetap
+ * 1920x1080 landscape, sementara perangkatnya digantung miring sehingga sisi
+ * panjangnya berdiri tegak. Yang bisa diputar hanya isinya.
+ *
+ * Panggung tetap berbentuk portrait 9:16, lalu diputar 90 derajat. Pada layar
+ * 1920x1080 ia menjadi 1080x1920 yang mengisi bidang itu tepat tanpa sisa.
+ *
+ * Satuan font ikut ditukar: setelah diputar, LEBAR panggung terbentang di
+ * sepanjang tinggi layar, jadi acuannya 100vh — bukan 100vw.
+ */
+html[data-putar="90"],
+html[data-putar="270"] {
+  font-size: min(100vh / 46, 100vw / 82);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/*
+ * Peramban menyembunyikan [hidden] lewat stylesheet bawaannya, dan stylesheet
+ * bawaan SELALU kalah dari stylesheet penulis — berapa pun spesifisitasnya.
+ * Jadi setiap aturan `display:` yang ditulis di berkas ini diam-diam membuat
+ * elemennya kebal terhadap atribut hidden. Gejalanya sulit dilacak: elemen
+ * tampak tersembunyi di sebagian tempat dan tidak di tempat lain, tergantung
+ * apakah kelasnya kebetulan menetapkan display. Satu aturan di sini menutup
+ * seluruh kelas kesalahan itu untuk semua elemen sekaligus.
+ */
+[hidden] { display: none !important; }
+
+body {
+  height: 100vh;
+  overflow: hidden;
+  display: grid;
+  place-content: center;
+  grid-template-columns: 100vw;
+  background: var(--ungu-tua);
+  color: var(--tinta);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: var(--t-sm);
+
+  /* Layar sentuh publik: cegah seleksi teks, menu tahan-lama, cubit-zoom, dan
+     pantulan gulir. Tanpa ini, tamu yang menahan jarinya sedetik terlalu lama
+     akan memunculkan menu salin bawaan sistem di tengah acara. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+  cursor: default;
+}
+
+/*
+ * Latar acara dipasang pada panggung, bukan pada body: panggung itulah yang
+ * ikut diputar untuk TV yang digantung miring. Kalau gambarnya menempel di
+ * body, ia tetap tegak sementara isinya berputar.
+ *
+ * Posisi atas dipertahankan karena logo ONE7ELEVEN berada di sana. Rasio
+ * gambar 1:2 sedikit lebih ramping daripada bidang 9:16, jadi `cover` akan
+ * memangkas — dan pemangkasan itu diarahkan ke bawah, bukan ke logo.
+ */
+.panggung::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("latar.jpg") top center / cover no-repeat;
+  z-index: 0;
+}
+
+/* Isi layar berada di atas gambar latar. */
+.layar,
+.lampu,
+.tirai { position: relative; z-index: 1; }
+
+/* ============================== KERANGKA LAYAR ============================ */
+
+/*
+ * Panggung dikunci pada rasio layar kiosk (9:16) lalu dipusatkan.
+ *
+ * Tanpa ini, tata letak melar mengikuti bentuk jendela: di laptop 16:10 zona
+ * sentuh menjadi pendek dan lebar sehingga papan ketik terdorong keluar layar,
+ * dan apa yang terlihat saat menyetel sama sekali bukan apa yang akan muncul di
+ * layar 43" nanti. Dengan dikunci, jendela seukuran apa pun menampilkan bingkai
+ * yang identik dengan perangkat sungguhan — hanya lebih kecil, dengan pita
+ * kosong di kiri-kanan.
+ */
+.panggung {
+  position: relative;
+  width: min(100vw, calc(100vh * 9 / 16));
+  height: min(100vh, calc(100vw * 16 / 9));
+  margin-inline: auto;
+  overflow: hidden;
+}
+
+/*
+ * Dipusatkan lebih dulu, baru diputar. Memutar terhadap pojok kiri atas
+ * menuntut perhitungan geser yang harus benar untuk setiap ukuran layar;
+ * memusatkannya dulu membuat rotasi bekerja apa adanya di ukuran mana pun.
+ */
+html[data-putar="90"] .panggung,
+html[data-putar="270"] .panggung {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  margin: 0;
+  width: min(100vh, calc(100vw * 9 / 16));
+  height: min(100vw, calc(100vh * 16 / 9));
+}
+
+html[data-putar="90"] .panggung  { transform: translate(-50%, -50%) rotate(90deg); }
+html[data-putar="270"] .panggung { transform: translate(-50%, -50%) rotate(-90deg); }
+
+/* Tirai panel petugas ikut diputar, kalau tidak ia muncul menyamping. */
+html[data-putar="90"] .tirai  { transform: rotate(90deg); }
+html[data-putar="270"] .tirai { transform: rotate(-90deg); }
+
+.layar {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  /*
+   * Zona sentuh mengambil setinggi yang benar-benar dibutuhkan isinya; sisanya
+   * jatuh ke zona pajang. Pembagian tetap 42/58 yang dipakai sebelumnya
+   * memotong beberapa puluh piksel di bawah pada setiap layar bermasukan —
+   * tepat di tempat tombol utama berada — karena papan ketik dan tombol
+   * ternyata butuh sedikit lebih dari jatahnya.
+   *
+   * minmax(0, …) wajib: baris grid berukuran auto secara bawaan menolak
+   * menyusut di bawah tinggi isinya, yang membuat pembatasan ini tidak berguna.
+   */
+  grid-template-rows: minmax(0, 1fr) auto;
+  animation: masuk .35s ease both;
+}
+
+.layar[hidden] { display: none; }
+
+.layar-tengah {
+  grid-template-rows: 1fr;
+  place-content: center;
+  justify-items: center;
+  gap: 2rem;
+  text-align: center;
+}
+
+@keyframes masuk {
+  from { opacity: 0; transform: translateY(1.5rem); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ------------------------------- zona pajang ------------------------------
+   Bagian atas layar setinggi ~40 cm dari lantai di atas jangkauan nyaman.
+   Isinya hanya yang dibaca, tidak pernah yang disentuh.                     */
+
+/*
+  * Tabir putih lembut di belakang teks.
+  *
+  * Gambar latar berpindah dari ungu pekat di tepi ke perak terang di tengah,
+  * jadi tidak ada satu warna teks yang aman di seluruh bidangnya. Tabir ini
+  * menyeragamkan bidang di belakang tulisan tanpa menutupi motif logam yang
+  * jadi ciri templatnya.
+  */
+.zona-pajang::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(70% 45% at 50% 52%, rgba(255,255,255,.72), rgba(255,255,255,0) 72%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.zona-pajang {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.1rem;
+  /*
+   * Ruang bebas untuk logo.
+   *
+   * Logo ONE7ELEVEN adalah bagian dari gambar latar, di posisi TETAP sekitar
+   * 15% tinggi panggung. Isi layar sebaliknya bergeser: layar bermasukan punya
+   * zona pajang yang jauh lebih pendek, dan tanpa jarak ini judulnya naik
+   * menabrak logo — dua tulisan bertumpuk yang keduanya jadi tak terbaca.
+   */
+  padding: 14rem 2.5rem 1rem;
+  text-align: center;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.kelir {
+  font-size: var(--t-md);
+  font-weight: var(--b-tegas);
+  letter-spacing: .35em;
+  text-transform: uppercase;
+  color: var(--ungu);
+}
+
+.judul {
+  font-size: var(--t-3xl);
+  line-height: 1.05;
+  font-weight: var(--b-judul);
+  letter-spacing: -.01em;
+  background: linear-gradient(180deg, var(--ungu-tua), var(--ungu-pekat));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  /* Sedikit cahaya putih di belakang huruf memisahkannya dari motif logam. */
+  filter: drop-shadow(0 .12rem .5rem rgba(255,255,255,.85));
+  /* Nama tamu bisa sepanjang 40 huruf; tanpa ini kata terpanjang akan
+     menembus tepi layar alih-alih turun ke baris berikutnya. */
+  overflow-wrap: anywhere;
+  max-width: 38rem;
+}
+
+.judul-sedang { font-size: var(--t-2xl); font-weight: var(--b-judul); }
+
+.ajakan {
+  font-size: var(--t-lg);
+  line-height: 1.5;
+  color: var(--ungu-tua);
+  max-width: 34rem;
+}
+
+/* ------------------------------- zona sentuh ------------------------------
+   JANGKAUAN TANGAN
+   Layar 43" portrait tingginya sekitar 95 cm. Bila tepi bawahnya dipasang
+   ~75 cm dari lantai, hanya bagian bawah layar yang berada di rentang 100-150
+   cm — satu-satunya rentang yang nyaman dijangkau berdiri, termasuk oleh tamu
+   bertubuh pendek dan pengguna kursi roda. Karena itu seluruh papan ketik dan
+   tombol dikurung di sini, dan tidak ada satu pun elemen yang bisa disentuh
+   di atas garis ini.                                                        */
+
+.zona-sentuh {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 0;
+  padding: 1.6rem 2.2rem 2.4rem;
+  /*
+    * Panel kaca buram, bukan bidang gelap.
+    *
+    * Papan ketik dan tombol harus tetap terbaca di atas gambar latar yang
+    * terang di tengah dan ungu di tepi. Bidang putih tembus pandang menaikkan
+    * kontras di kedua keadaan itu sekaligus, tanpa menutupi motifnya.
+    */
+   background: var(--kaca);
+   backdrop-filter: blur(1.2rem) saturate(1.15);
+   border-top: 1px solid rgba(255, 255, 255, .55);
+   box-shadow: 0 -1rem 3rem -1rem rgba(51, 34, 77, .28);
+}
+
+.label {
+  font-size: var(--t-sm);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--tinta-redup);
+}
+
+.opsional { text-transform: none; letter-spacing: 0; opacity: .7; }
+
+.isian {
+  display: block;
+  min-height: 5.2rem;
+  padding: 1rem 1.4rem;
+  border: 2px solid var(--garis);
+  border-radius: var(--sudut-l);
+  background: rgba(255, 255, 255, .72);
+  font-size: var(--t-xl);
+  font-weight: var(--b-judul);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.isian-kecil { font-size: var(--t-lg); font-weight: var(--b-tegas); min-height: 5.6rem; }
+
+/* Sorot lembut menandai bahwa kotak inilah yang sedang menerima ketikan —
+   pengganti caret, yang tidak ada karena ini <output>, bukan <input>. */
+.isian { box-shadow: 0 0 0 0 rgba(201, 162, 39, .5); transition: box-shadow .2s; }
+.isian.aktif { border-color: var(--emas); box-shadow: 0 0 2.5rem -.5rem rgba(201, 162, 39, .5); }
+
+.isian:empty::before {
+  content: attr(data-kosong);
+  color: var(--tinta-redup);
+  font-weight: var(--b-normal);
+  opacity: .65;
+}
+
+/* Pengetik berkedip di ujung teks. */
+.isian:not(:empty)::after {
+  content: "";
+  display: inline-block;
+  width: .09em;
+  height: .95em;
+  margin-left: .06em;
+  vertical-align: -.12em;
+  background: var(--emas);
+  animation: kedip 1.1s steps(1) infinite;
+}
+
+@keyframes kedip { 0%,50% { opacity: 1 } 50.01%,100% { opacity: 0 } }
+
+.sisa {
+  font-size: var(--t-sm);
+  text-align: right;
+  color: var(--tinta-redup);
+  min-height: 1.4rem;
+}
+
+.sisa.hampir { color: var(--emas); }
+
+/* -------------------------------- papan ketik -----------------------------
+   Papan ketik digambar sendiri, bukan memakai bawaan sistem operasi. Di
+   Windows mode kiosk, papan ketik sentuh bawaan sering tidak muncul sama
+   sekali untuk elemen non-input, atau muncul menutupi separuh layar di posisi
+   yang tidak bisa diatur. Menggambarnya sendiri membuat posisinya pasti.     */
+
+.papan {
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+  margin-top: auto;
+}
+
+.deret {
+  display: flex;
+  gap: .55rem;
+  justify-content: center;
+}
+
+.tuts {
+  flex: 1 1 0;
+  min-width: 0;
+  /* ~2,4 cm pada layar 43" — di atas ambang 2 cm yang membuat salah tekan
+     jadi sering pada permukaan sentuh berdiri. */
+  height: 4.6rem;
+  border: 1px solid var(--garis);
+  border-radius: var(--sudut);
+  background: var(--kaca-tebal);
+  color: var(--tinta);
+  font: inherit;
+  font-size: var(--t-lg);
+  font-weight: var(--b-tegas);
+  /* Tidak ada :hover di mana pun pada berkas ini. Pada layar sentuh, keadaan
+     hover menempel setelah jari diangkat sehingga tuts tampak menyala terus. */
+  transition: transform .06s, background .12s;
+}
+
+.tuts:active {
+  transform: translateY(.15rem) scale(.97);
+  background: var(--emas);
+  color: #1a1405;
+  border-color: var(--emas);
+}
+
+.tuts-lebar  { flex-grow: 1.6; }
+.tuts-spasi  { flex-grow: 5; }
+.tuts-hapus  { flex-grow: 1.8; background: #2a1c2c; }
+
+/* ---------------------------------- tombol -------------------------------- */
+
+.aksi { display: flex; gap: 1rem; }
+
+.tombol {
+  flex: 1;
+  height: 5.4rem;
+  border: none;
+  border-radius: var(--sudut-l);
+  font: inherit;
+  font-size: var(--t-lg);
+  font-weight: var(--b-judul);
+  letter-spacing: .02em;
+  transition: transform .06s, opacity .15s;
+}
+
+.tombol:active { transform: scale(.975); }
+
+.tombol-utama {
+  flex-grow: 2;
+  background: linear-gradient(180deg, var(--emas-terang), var(--emas));
+  color: #241a02;
+  box-shadow: 0 .6rem 1.8rem -.6rem rgba(201, 162, 39, .55);
+}
+
+.tombol-sunyi {
+  background: transparent;
+  color: var(--tinta-redup);
+  border: 2px solid var(--garis);
+}
+
+.tombol:disabled { opacity: .3; box-shadow: none; }
+
+/* --------------------------------- pemintal ------------------------------- */
+
+.pemintal {
+  width: 6rem;
+  height: 6rem;
+  border: .5rem solid var(--garis);
+  border-top-color: var(--emas);
+  border-radius: 50%;
+  animation: putar .9s linear infinite;
+}
+
+@keyframes putar { to { transform: rotate(360deg) } }
+
+/* ---------------------------------- hasil --------------------------------- */
+
+.zona-pajang-hasil { padding-bottom: 0; }
+
+.zona-hasil { align-items: center; justify-content: center; gap: 1.4rem; }
+
+.kartu-qr {
+  background: #fff;
+  padding: 1.4rem 1.4rem 1rem;
+  border-radius: var(--sudut-l);
+  box-shadow: 0 1.5rem 4rem -1rem rgba(51, 34, 77, .45);
+  text-align: center;
+}
+
+/* QR di layar sengaja besar: ini jalan keluar bila printer macet atau kertas
+   habis, dan pemindai ponsel butuh QR yang lebar untuk mengunci dari jarak
+   satu lengan. */
+.kartu-qr img {
+  display: block;
+  width: 21rem;
+  height: 21rem;
+  image-rendering: pixelated;
+}
+
+.kode-tampil {
+  margin-top: .5rem;
+  color: #1c1c1c;
+  font-size: var(--t-lg);
+  font-weight: var(--b-judul);
+  letter-spacing: .3em;
+  text-indent: .3em;
+}
+
+.petunjuk-qr { font-size: var(--t-md); color: var(--tinta-redup); text-align: center; }
+.petunjuk-qr b { color: var(--emas); }
+
+.aksi { width: 100%; }
+
+/* -------------------------- lampu status & panel -------------------------- */
+
+.lampu {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10;
+  width: 3.4rem;
+  height: 3.4rem;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.titik {
+  width: .8rem;
+  height: .8rem;
+  border-radius: 50%;
+  background: var(--tinta-redup);
+  opacity: .35;
+  transition: background .3s, opacity .3s;
+}
+
+.lampu[data-keadaan="baik"]    .titik { background: var(--aman);   opacity: .35; }
+.lampu[data-keadaan="tertunda"] .titik { background: var(--emas);  opacity: .9; }
+.lampu[data-keadaan="bahaya"]  .titik { background: var(--bahaya); opacity: 1; animation: denyut 1.4s ease-in-out infinite; }
+
+@keyframes denyut { 50% { opacity: .25; transform: scale(.75) } }
+
+.tirai {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: rgba(51, 34, 77, .78);
+  backdrop-filter: blur(6px);
+}
+
+.tirai[hidden] { display: none; }
+
+.panel {
+  width: 34rem;
+  padding: 2.4rem;
+  border: 1px solid var(--garis);
+  border-radius: var(--sudut-l);
+  background: var(--kaca-tebal);
+}
+
+.panel h2 { font-size: var(--t-xl); margin-bottom: 1.4rem; }
+
+.rincian {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: .7rem 1.4rem;
+  font-size: var(--t-md);
+  margin-bottom: 1.8rem;
+}
+
+.rincian dt { color: var(--tinta-redup); }
+.rincian dd { font-weight: var(--b-tegas); text-align: right; overflow-wrap: anywhere; }
+.rincian dd.buruk { color: var(--bahaya); }
+.rincian dd.baik  { color: var(--aman); }
+
+.aksi-panel .tombol { height: 4.4rem; font-size: var(--t-md); }
+
+/* Tautan yang berperan sebagai tombol di panel petugas. Tanpa ini ia tampil
+   sebagai teks bergaris bawah di tengah deretan tombol. */
+a.tombol {
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+}
+
+/* =============================================================================
+   LAYAR PILIH JALUR
+   ========================================================================== */
+
+.zona-pilih { justify-content: center; gap: 1.4rem; }
+
+.kartu-pilih {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+  width: 100%;
+  /*
+   * Tinggi minimum disamakan.
+   *
+   * Judul kartu kedua panjangnya satu kalimat penuh dan membungkus jadi dua
+   * baris, sedangkan yang pertama hanya tiga kata. Tanpa tinggi yang sama,
+   * kedua pilihan yang seharusnya setara tampil dengan bobot berbeda — dan
+   * tamu membaca perbedaan itu sebagai petunjuk mana yang "utama".
+   */
+  min-height: 11rem;
+  padding: var(--s-4);
+  border: 2px solid var(--garis);
+  border-radius: var(--sudut-l);
+  background: var(--kaca-tebal);
+  color: var(--tinta);
+  font: inherit;
+  text-align: left;
+  transition: transform .08s, border-color .15s;
+}
+
+.kartu-pilih:active { transform: scale(.985); border-color: var(--emas); }
+
+.kartu-pilih-utama {
+  border-color: rgba(201, 162, 39, .5);
+  background: linear-gradient(135deg, rgba(201, 162, 39, .16), var(--kaca-tebal));
+}
+
+/*
+ * Ikon digambar sebagai vektor, bukan emoji.
+ *
+ * Emoji dirender oleh sistem operasi: bentuk, warna, dan gayanya berbeda di
+ * tiap mesin, dan tidak satu pun mengikuti palet acara. Pada layar setinggi
+ * dua meter, gambar kuning-cerah bawaan sistem menabrak keseluruhan tampilan
+ * ungu-perak yang justru sedang dibangun.
+ */
+.kartu-ikon {
+  flex: 0 0 auto;
+  /* Ukuran dan ketebalan garis ikon disamakan supaya kedua kartu terbaca
+     setara; ikon yang sedikit berbeda bobotnya membuat salah satu tampak
+     lebih penting tanpa alasan. */
+  width: 3.6rem;
+  height: 3.6rem;
+  display: grid;
+  place-items: center;
+  color: var(--ungu);
+}
+
+.kartu-ikon svg { width: 100%; height: 100%; display: block; }
+
+.kartu-pilih-utama .kartu-ikon { color: var(--emas); }
+.kartu-teks { display: grid; gap: .4rem; }
+.kartu-teks b {
+  font-size: var(--t-xl);
+  font-weight: var(--b-judul);
+  line-height: 1.2;
+  /* Judul kartu tidak boleh dipenggal di tanda hubung: "PAM-PLUS" yang pecah
+     menjadi "PAM-" dan "PLUS!" terbaca sebagai dua hal berbeda. */
+  hyphens: none;
+  overflow-wrap: normal;
+}
+.kartu-teks small { font-size: var(--t-md); color: var(--tinta-redup); line-height: 1.35; }
+
+.judul-kecil { font-size: var(--t-2xl); }
+
+/* =============================================================================
+   PINDAI KARTU MEMBER
+   ========================================================================== */
+
+.zona-member { gap: 1.4rem; }
+
+.kamera-member {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  border-radius: var(--sudut-l);
+  overflow: hidden;
+  background: #000;
+  border: 2px solid var(--garis);
+}
+
+.kamera-member video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.kamera-member[data-kena="ya"] { border-color: var(--aman); }
+.kamera-member[data-kena="ya"] .bidik span { border-color: var(--aman); }
+
+/* =============================================================================
+   SIAP-SIAP
+   ========================================================================== */
+
+.zona-siap { align-items: center; justify-content: center; gap: 1.6rem; }
+
+.lingkar-waktu {
+  display: grid;
+  place-items: center;
+  gap: .3rem;
+  width: 13rem;
+  height: 13rem;
+  border: .5rem solid var(--garis);
+  border-top-color: var(--emas);
+  border-radius: 50%;
+}
+
+.lingkar-angka {
+  font-size: var(--t-3xl);
+  font-weight: var(--b-judul);
+  font-variant-numeric: tabular-nums;
+  color: var(--emas);
+  line-height: 1;
+}
+
+.lingkar-label { font-size: var(--t-sm); color: var(--tinta-redup); }
+.petunjuk-kecil { font-size: var(--t-sm); color: var(--tinta-redup); text-align: center; }
+
+/* =============================================================================
+   MEREKAM — layar penuh, tidak ada zona pajang/sentuh
+   ========================================================================== */
+
+.layar-rekam { grid-template-rows: 1fr; }
+
+.panggung-rekam { position: relative; overflow: hidden; background: #000; }
+
+.panggung-rekam video {
+  width: 100%;
+  height: 100%;
+  /*
+   * `contain`, bukan `cover`.
+   *
+   * Kamera memberi bingkai landscape 1280x720 sementara kotak ini portrait
+   * 1080x1920. Dengan `cover`, yang terlihat hanya 32% bagian tengah lebar
+   * bingkai — sedangkan MediaRecorder tetap merekam 1280x720 SELURUHNYA.
+   * Tamu jadi membingkai dirinya berdasarkan potongan yang bukan yang direkam,
+   * lalu kaget melihat hasilnya. `contain` membuat yang terlihat persis sama
+   * dengan yang tersimpan.
+   */
+  object-fit: contain;
+  /*
+   * Dicerminkan, sama seperti layar pindai sebelumnya.
+   *
+   * Semula dibiarkan apa adanya supaya pratinjau persis sama dengan berkas yang
+   * tersimpan. Di tempat kejadiannya itu justru terasa salah: tamu baru saja
+   * melihat dirinya seperti di cermin selama memindai QR, lalu gambarnya
+   * membalik begitu perekaman dimulai. Yang dibalik hanya tampilan di layar —
+   * MediaRecorder tetap menyimpan bingkai asli, jadi rekamannya tidak
+   * tercermin.
+   */
+  transform: scaleX(-1);
+}
+
+.lapis-rekam {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1.4rem;
+  padding: 3rem 2.5rem;
+  background: linear-gradient(180deg, rgba(51,34,77,.6) 0%, transparent 25%, transparent 55%, rgba(51,34,77,.82) 100%);
+  pointer-events: none;
+}
+
+.aba-aba {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.aba-aba span {
+  font-size: var(--t-angka);
+  font-weight: var(--b-judul);
+  line-height: 1;
+  color: var(--emas-terang);
+  text-shadow: 0 .15rem 1.2rem rgba(51,34,77,.9);
+  animation: denyut-aba 1s ease-out infinite;
+}
+
+@keyframes denyut-aba {
+  0%   { transform: scale(1.25); opacity: 0; }
+  25%  { transform: scale(1);    opacity: 1; }
+  100% { transform: scale(.9);   opacity: .75; }
+}
+
+.tanda-rekam {
+  position: absolute;
+  top: 3rem;
+  right: 2.5rem;
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: .7rem 1.3rem;
+  border-radius: var(--sudut-pil);
+  background: rgba(51,34,77,.72);
+  font-size: var(--t-lg);
+  font-weight: var(--b-judul);
+  font-variant-numeric: tabular-nums;
+}
+
+.titik-rekam {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: var(--bahaya);
+  animation: denyut 1.2s ease-in-out infinite;
+}
+
+.bilah-rekam {
+  width: 100%;
+  height: .6rem;
+  border-radius: var(--sudut-l);
+  background: rgba(255,255,255,.18);
+  overflow: hidden;
+}
+
+.bilah-rekam i {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--emas), var(--emas-terang));
+  transition: width .2s linear;
+}
+
+.ajakan-rekam { color: var(--tinta); font-weight: var(--b-tegas); text-align: center; }
+
+/*
+ * Lapisan rekam memakai pointer-events:none supaya tidak menghalangi video di
+ * bawahnya, jadi tombol ini harus mengaktifkannya kembali untuk dirinya
+ * sendiri. Tanpa baris itu tombolnya terlihat tetapi tidak bisa ditekan.
+ */
+.tombol-selesai-rekam {
+  pointer-events: auto;
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 26rem;
+  height: 5.4rem;
+}
+
+.tombol-selesai-rekam[hidden] { display: none; }
+
+/* Beberapa detik pertama tombolnya sengaja mati: klip satu detik tidak berguna
+   bagi siapa pun, dan tamu yang gugup cenderung menekan apa pun yang terlihat. */
+.tombol-selesai-rekam:disabled { opacity: .4; box-shadow: none; }
+
+/* =============================================================================
+   TINJAU REKAMAN
+   ========================================================================== */
+
+/*
+ * Layar tinjau membalik pembagian barisnya: yang perlu memuai di sini adalah
+ * pemutar video, bukan tulisan di atasnya. Dengan pembagian bawaan
+ * (pajang memuai, sentuh seukuran isi), tinggi pemutar tidak punya batas untuk
+ * dihitung — ia meminta setinggi isinya sendiri, yang bergantung pada tingginya
+ * sendiri — dan tombol Kirim terdorong ke luar bingkai.
+ */
+.layar[data-layar="tinjau"] { grid-template-rows: auto minmax(0, 1fr); }
+
+.zona-pajang-tinjau { padding-top: 13rem; padding-bottom: .5rem; }
+
+.zona-tinjau {
+  align-items: center;
+  justify-content: center;
+  gap: 1.1rem;
+  min-height: 0;
+}
+
+/*
+ * Pemutar dibungkus kotak yang menyusut, dan videolah yang menyesuaikan diri
+ * ke dalamnya.
+ *
+ * Sebelumnya `aspect-ratio: 9/16` dipasang langsung pada elemen selebar zona
+ * sentuh. Rasio itu lalu menghitung tinggi dari lebar — menghasilkan elemen
+ * setinggi ribuan piksel yang mendorong tombol Kirim jauh ke luar layar, makin
+ * parah justru pada jendela yang makin lebar.
+ */
+.bingkai-pemutar {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  position: relative;
+}
+
+/*
+ * Pemutar mengisi penuh kotaknya, dan object-fit yang mengurus rasio video.
+ *
+ * Percobaan sebelumnya memasang `aspect-ratio: 9/16` pada elemennya sendiri.
+ * Rasio itu hanya berlaku bila salah satu sisi punya ukuran pasti; `height:100%`
+ * di dalam kotak yang tingginya sendiri ditentukan flex tidak memberikan
+ * kepastian itu, sehingga peramban jatuh ke lebar — 977px lebar menjadi 1737px
+ * tinggi, dan tombol Kirim terdorong ke luar bingkai. Penempatan absolut
+ * menghapus seluruh perhitungan itu: kotaknya yang menentukan, videonya
+ * menyesuaikan diri di dalamnya.
+ */
+.pemutar {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--sudut-l);
+  background: #000;
+  object-fit: contain;
+}
+
+
+/* =============================================================================
+   LAPISAN KAMERA — dipakai bersama layar member (kiosk) dan halaman check-in
+   ========================================================================== */
+
+.bidik {
+  position: absolute;
+  inset: 18%;
+  pointer-events: none;
+}
+
+.bidik span {
+  position: absolute;
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 3px solid var(--emas);
+  opacity: .85;
+}
+
+.bidik span:nth-child(1) { top: 0; left: 0; border-right: 0; border-bottom: 0; border-radius: .6rem 0 0 0; }
+.bidik span:nth-child(2) { top: 0; right: 0; border-left: 0; border-bottom: 0; border-radius: 0 .6rem 0 0; }
+.bidik span:nth-child(3) { bottom: 0; left: 0; border-right: 0; border-top: 0; border-radius: 0 0 0 .6rem; }
+.bidik span:nth-child(4) { bottom: 0; right: 0; border-left: 0; border-top: 0; border-radius: 0 0 .6rem 0; }
+
+.tirai-kamera {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  text-align: center;
+  background: rgba(51, 34, 77, .88);
+}
+
+.tirai-pesan { color: var(--tinta-redup); line-height: 1.5; max-width: 24rem; }
+
+/* ---------------------------- setelan waktu ------------------------------- */
+
+.panel-subjudul {
+  margin: .4rem 0 .8rem;
+  font-size: var(--t-xs);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--tinta-redup);
+}
+
+.setelan {
+  display: grid;
+  gap: .6rem;
+  margin-bottom: 1.6rem;
+}
+
+.setelan-baris {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 1rem;
+}
+
+.setelan-label { font-size: var(--t-sm); }
+
+.setelan-label small {
+  display: block;
+  font-size: var(--t-xs);
+  color: var(--tinta-redup);
+}
+
+.setelan-atur {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+/* Tombol besar karena panel ini dipakai dengan jari di layar 43", sering oleh
+   petugas yang sedang berdiri menyamping sambil melayani antrean. */
+.setelan-tombol {
+  width: 3.4rem;
+  height: 3.4rem;
+  border: 1px solid var(--garis);
+  border-radius: var(--sudut);
+  background: rgba(255,255,255,.6);
+  color: var(--tinta);
+  font: inherit;
+  font-size: var(--t-lg);
+  font-weight: var(--b-judul);
+  line-height: 1;
+}
+
+.setelan-tombol:active { background: var(--emas); color: #1a1405; }
+.setelan-tombol:disabled { opacity: .25; }
+
+.setelan-nilai {
+  min-width: 4.6rem;
+  text-align: center;
+  font-size: var(--t-md);
+  font-weight: var(--b-judul);
+  font-variant-numeric: tabular-nums;
+  color: var(--emas);
+}
+
+.setelan-nilai small { font-size: var(--t-xs); font-weight: var(--b-normal); color: var(--tinta-redup); }
+
+/* ============================================================================
+   KONFIRMASI DATA MEMBER
+   ========================================================================== */
+
+.rincian-konf {
+  display: grid;
+  gap: var(--s-3);
+  margin-bottom: auto;
+  padding: var(--s-4);
+  border: 1px solid var(--garis);
+  border-radius: var(--sudut-l);
+  background: rgba(255, 255, 255, .72);
+}
+
+.rincian-konf > div {
+  display: grid;
+  gap: var(--s-1);
+  padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--garis);
+}
+
+.rincian-konf > div:last-child { padding-bottom: 0; border-bottom: 0; }
+
+.rincian-konf dt {
+  font-size: var(--t-sm);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ungu);
+}
+
+.rincian-konf dd {
+  font-size: var(--t-xl);
+  font-weight: var(--b-judul);
+  color: var(--ungu-pekat);
+  overflow-wrap: anywhere;
+}
+
+/* Nomor dibaca angka demi angka saat dicocokkan dengan kartu, bukan sebagai
+   kata — jadi lebarnya disamakan supaya tidak perlu dibaca dua kali. */
+.rincian-konf dd.angka {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .06em;
+}
+
+.rincian-konf dd.kosong { color: var(--tinta-redup); font-weight: var(--b-normal); }
+
+/* ---------------------------- sisa gift voucher --------------------------- */
+
+.sisa-voucher {
+  margin-top: var(--s-2);
+  padding: var(--s-2) var(--s-4);
+  border: 1px solid var(--emas);
+  border-radius: var(--sudut-pil);
+  background: rgba(201, 162, 39, .14);
+  font-size: var(--t-lg);
+  font-weight: var(--b-judul);
+  color: var(--ungu-pekat);
+}
+
+.sisa-voucher[hidden] { display: none; }
+
+/* Persediaan menipis: angka yang tinggal sedikit harus terbaca berbeda dari
+   jauh, supaya petugas menyadarinya sebelum tamu yang menanyakannya. */
+.sisa-voucher.menipis { border-color: var(--bahaya); background: rgba(194, 56, 75, .12); }
+.sisa-voucher.habis   { border-color: var(--bahaya); background: rgba(194, 56, 75, .18); }
+
+/* =============================================================================
+   PANEL PETUGAS — TATA LETAK
+   ========================================================================== */
+
+/*
+ * Panel dibatasi tinggi layar dan boleh digulir.
+ *
+ * Isinya tumbuh terus sepanjang pembangunan — tujuh pengaturan dan empat
+ * halaman sekarang. Tanpa batas ini, panel memanjang melewati tepi layar dan
+ * tombol Tutup di paling bawah tidak bisa dijangkau sama sekali.
+ */
+.panel {
+  max-height: 90vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Tautan halaman: satu kolom penuh, mudah ditekan, tidak saling berdesakan
+   seperti saat kelimanya dipaksa berjajar dalam satu baris. */
+/* Dua kolom: empat halaman muat dalam dua baris, bukan empat. Panel harus
+   selesai dalam satu layar — petugas membukanya sambil tamu menunggu. */
+.panel-tautan {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-2);
+  margin-bottom: var(--s-3);
+}
+
+.panel-tautan a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 4rem;
+  padding: 0 var(--s-4);
+  border: 1px solid var(--garis);
+  border-radius: var(--sudut);
+  background: rgba(255, 255, 255, .6);
+  color: var(--ungu-tua);
+  font-size: var(--t-md);
+  font-weight: var(--b-tegas);
+  text-decoration: none;
+}
+
+.panel-tautan a:active { background: var(--emas); color: #1a1405; }
+
+.panel-aksi { display: flex; gap: var(--s-2); }
+.panel-aksi .tombol { flex: 1; height: 4.4rem; font-size: var(--t-md); }
+
+/* Baris pengaturan: label boleh menyusut, kontrolnya tidak — supaya tombol
+   tidak pernah terdorong keluar oleh label yang kepanjangan. */
+.setelan-baris { grid-template-columns: minmax(0, 1fr) auto; }
+.setelan-label { min-width: 0; }
+.setelan-nilai { min-width: 6rem; }
+
+/* Status printer bisa berupa kalimat panjang; dibiarkan membungkus rapi
+   alih-alih memaksa lebar kolomnya. */
+.rincian dd { overflow-wrap: anywhere; line-height: 1.35; }
+
+/*
+ * Isi panel dikecilkan terhadap skala kiosk.
+ *
+ * Ukuran huruf kiosk dibuat untuk dibaca tamu dari dua meter; panel dibaca
+ * petugas dari jarak satu lengan, sambil menyentuh. Memakai skala yang sama
+ * membuat tujuh pengaturan dan empat halaman memanjang jauh melewati layar.
+ */
+.panel { font-size: .68em; }
+.panel h2 { font-size: var(--t-lg); margin-bottom: var(--s-3); }
+.panel-subjudul { margin: var(--s-3) 0 var(--s-2); font-size: var(--t-2xs); }
+
+.rincian { row-gap: var(--s-1); font-size: var(--t-sm); }
+.rincian dt, .rincian dd { line-height: 1.3; }
+
+.setelan-baris { padding: var(--s-1) 0; }
+.setelan-label { font-size: var(--t-sm); }
+.setelan-label small { font-size: var(--t-2xs); }
+.setelan-baris button { width: 3.1rem; height: 3.1rem; font-size: var(--t-md); }
+.setelan-nilai { font-size: var(--t-md); }
+
+.panel-tautan a { min-height: 3.4rem; font-size: var(--t-sm); }
+.panel-aksi .tombol { height: 3.8rem; font-size: var(--t-sm); }
+
+/* QR yang ditolak: bingkai merah, supaya bedanya dengan "terbaca" terlihat
+   dari jarak antre, bukan hanya terbaca dari tulisannya. */
+.kamera-member[data-kena="tolak"] { border-color: var(--bahaya); box-shadow: 0 0 0 .3rem rgba(194, 56, 75, .25); }
+.kamera-member[data-kena="tolak"] .bidik span { border-color: var(--bahaya); }

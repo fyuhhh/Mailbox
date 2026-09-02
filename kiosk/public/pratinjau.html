@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pratinjau TV — Kiosk Undangan</title>
+<style>
+/* =============================================================================
+   Pratinjau kiosk di dalam bingkai TV.
+
+   Menguji tampilan kiosk di laptop menyesatkan: yang akhirnya dipasang adalah
+   TV 43" landscape yang DIGANTUNG MIRING. Halaman ini menampilkan dua hal yang
+   sering tertukar — apa yang DIKIRIM ke TV, dan apa yang DILIHAT tamu setelah
+   perangkatnya dimiringkan — supaya keduanya bisa diperiksa sebelum hari acara.
+   ========================================================================== */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2rem 1.5rem 4rem;
+  background: #16121f;
+  color: #e9e4f2;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+h1 { font-size: 1.35rem; font-weight: 700; }
+
+.keterangan {
+  max-width: 44rem;
+  text-align: center;
+  font-size: .95rem;
+  line-height: 1.6;
+  color: #a99cc4;
+}
+
+.kendali { display: flex; flex-wrap: wrap; gap: .6rem; justify-content: center; }
+
+.kendali button {
+  padding: .7rem 1.2rem;
+  border: 1px solid #3b3150;
+  border-radius: .7rem;
+  background: #221b30;
+  color: #e9e4f2;
+  font: inherit;
+  font-size: .92rem;
+}
+
+.kendali button[aria-pressed="true"] {
+  background: #c9a227;
+  border-color: #c9a227;
+  color: #241a02;
+  font-weight: 700;
+}
+
+/* -------------------------------- bingkai TV ------------------------------ */
+
+.pentas {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  /* Ruang untuk bingkai TV yang berdiri tegak setelah dimiringkan. */
+  min-height: 62rem;
+}
+
+.tv {
+  position: relative;
+  padding: .9rem;
+  border-radius: 1rem;
+  background: linear-gradient(160deg, #2a2438, #14111c);
+  box-shadow: 0 2rem 5rem -1rem rgba(0,0,0,.75), 0 0 0 1px #3b3150;
+  transition: transform .45s cubic-bezier(.2,.7,.3,1);
+}
+
+/* Kaki penyangga hanya masuk akal saat TV berdiri seperti aslinya. */
+.tv::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -1.6rem;
+  width: 26%;
+  height: 1.6rem;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, #2a2438, #14111c);
+  border-radius: 0 0 .5rem .5rem;
+}
+
+body[data-terpasang="ya"] .tv { transform: rotate(-90deg); }
+body[data-terpasang="ya"] .tv::after { opacity: 0; }
+
+.layar-tv {
+  width: var(--lebar);
+  height: var(--tinggi);
+  overflow: hidden;
+  border-radius: .35rem;
+  background: #000;
+}
+
+/*
+ * Iframe dirender pada ukuran TV yang sesungguhnya lalu diperkecil.
+ *
+ * Menyusutkan iframe secara langsung akan mengubah ukuran viewport di dalamnya,
+ * dan seluruh tata letak kiosk terikat pada viewport — yang terlihat bukan lagi
+ * yang akan muncul di TV. Merender pada ukuran penuh lalu menskalakan gambarnya
+ * menjaga setiap perbandingan tetap benar.
+ */
+.layar-tv iframe {
+  width: 1920px;
+  height: 1080px;
+  border: 0;
+  transform-origin: 0 0;
+  transform: scale(var(--skala));
+}
+
+.label {
+  margin-top: .4rem;
+  font-size: .82rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: #7d6f99;
+  text-align: center;
+}
+
+body[data-terpasang="ya"] .pentas { min-height: 66rem; }
+</style>
+</head>
+<body data-terpasang="tidak">
+
+<h1>Pratinjau TV 43"</h1>
+
+<p class="keterangan">
+  TV di acara ini landscape 1920&times;1080 dan tidak bisa memutar layarnya
+  sendiri — perangkatnya yang digantung miring. Dua tombol di bawah menunjukkan
+  dua hal berbeda: <b>sinyal</b> yang dikirim ke TV, dan <b>pandangan tamu</b>
+  setelah perangkatnya dimiringkan.
+</p>
+
+<div class="kendali">
+  <button type="button" data-lihat="tidak" aria-pressed="true">Sinyal ke TV</button>
+  <button type="button" data-lihat="ya" aria-pressed="false">Pandangan tamu</button>
+  <span style="width:1px;background:#3b3150;margin:0 .3rem"></span>
+  <button type="button" data-putar="90" aria-pressed="true">Putar 90&deg;</button>
+  <button type="button" data-putar="270" aria-pressed="false">Putar 270&deg;</button>
+  <button type="button" data-muat>Muat ulang</button>
+  <button type="button" data-buka>Buka kiosk penuh</button>
+</div>
+
+<div class="pentas">
+  <div>
+    <div class="tv">
+      <div class="layar-tv" id="layar">
+        <iframe id="bingkai" src="/?putar=90" title="Kiosk"></iframe>
+      </div>
+    </div>
+    <p class="label" id="label">Sinyal 1920&times;1080 apa adanya</p>
+  </div>
+</div>
+
+<script>
+  'use strict';
+
+  var LEBAR_TV = 1920, TINGGI_TV = 1080;
+
+  function pasangUkuran() {
+    // Muat sesuai ruang yang ada, tetapi jangan pernah diperbesar melebihi
+    // ukuran aslinya — memperbesar hanya membuat piksel kabur tanpa menambah
+    // satu pun informasi yang bisa dinilai.
+    var terpasang = document.body.dataset.terpasang === 'ya';
+    var ruangLebar = Math.min(window.innerWidth - 60, 1200);
+    var ruangTinggi = window.innerHeight - 320;
+
+    // Saat dimiringkan, sisi panjang TV terbentang vertikal.
+    var muatLebar = terpasang ? ruangTinggi : ruangLebar;
+    var skala = Math.min(muatLebar / LEBAR_TV, 1);
+
+    var layar = document.getElementById('layar');
+    layar.style.setProperty('--lebar', LEBAR_TV * skala + 'px');
+    layar.style.setProperty('--tinggi', TINGGI_TV * skala + 'px');
+    layar.style.setProperty('--skala', skala);
+  }
+
+  document.querySelectorAll('[data-lihat]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.body.dataset.terpasang = b.dataset.lihat;
+      document.querySelectorAll('[data-lihat]').forEach(function (x) {
+        x.setAttribute('aria-pressed', String(x === b));
+      });
+      document.getElementById('label').innerHTML = b.dataset.lihat === 'ya'
+        ? 'Seperti dilihat tamu di depan TV'
+        : 'Sinyal 1920&times;1080 apa adanya';
+      pasangUkuran();
+    });
+  });
+
+  // Arah putaran dipilih di sini saja; setelan kiosk yang tersimpan tidak
+  // tersentuh, sehingga layar penyetel tetap tegak dan bisa dipakai.
+  document.querySelectorAll('[data-putar]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.getElementById('bingkai').src = '/?putar=' + b.dataset.putar;
+      document.querySelectorAll('[data-putar]').forEach(function (x) {
+        x.setAttribute('aria-pressed', String(x === b));
+      });
+    });
+  });
+
+  document.querySelector('[data-muat]').addEventListener('click', function () {
+    var f = document.getElementById('bingkai');
+    f.src = f.src;
+  });
+
+  document.querySelector('[data-buka]').addEventListener('click', function () {
+    window.open('/', '_blank');
+  });
+
+  window.addEventListener('resize', pasangUkuran);
+  pasangUkuran();
+</script>
+
+</body>
+</html>

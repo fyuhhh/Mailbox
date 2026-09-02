@@ -1,0 +1,15 @@
+node_modules/
+data/
+*.log
+.DS_Store
+
+# Setelan per-mesin. Berisi SYNC_SECRET dan SANDI_PETUGAS — pola ini harus
+# menyebut .env.bak secara terpisah, karena ".env" saja tidak cocok dengan
+# nama berkas lain yang berawalan sama.
+.env
+.env.*
+!.env.example
+
+# Kode gift voucher. Repo ini publik; kodenya tidak boleh ikut terbaca.
+*PromoCode*.xlsx
+promocode-*.xlsx

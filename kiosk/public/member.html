@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data Member PAM-PLUS</title>
+<link rel="stylesheet" href="gaya.css">
+<link rel="stylesheet" href="scan.css">
+<style>
+.kotak-cari { display: flex; gap: .6rem; margin-bottom: 1rem; }
+
+.kotak-cari input {
+  flex: 1;
+  min-width: 0;
+  height: 3rem;
+  padding: 0 1rem;
+  border: 1px solid var(--garis);
+  border-radius: .7rem;
+  background: rgba(255,255,255,.75);
+  color: var(--tinta);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.kotak-cari input:focus { outline: 2px solid var(--emas); outline-offset: 1px; }
+
+.kotak-cari button {
+  height: 3rem;
+  padding: 0 1.1rem;
+  border: 1px solid var(--garis);
+  border-radius: .7rem;
+  background: rgba(255,255,255,.75);
+  color: var(--tinta);
+  font: inherit;
+  font-size: .92rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.kotak-cari button:disabled { opacity: .5; }
+
+.papan-nilai {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .6rem;
+  margin-bottom: 1rem;
+}
+
+.nilai {
+  padding: .8rem;
+  border: 1px solid var(--garis);
+  border-radius: .7rem;
+  background: rgba(255,255,255,.7);
+  text-align: center;
+}
+
+.nilai b { display: block; font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.nilai span { font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--tinta-redup); }
+
+.nilai.baru b { color: var(--aman); }
+.nilai.gagal b { color: var(--bahaya); }
+
+table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+
+th {
+  position: sticky;
+  top: 0;
+  padding: .6rem .7rem;
+  background: #efeaf7;
+  text-align: left;
+  font-size: .7rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--tinta-redup);
+  border-bottom: 1px solid var(--garis);
+}
+
+td { padding: .6rem .7rem; border-bottom: 1px solid rgba(74,53,104,.08); }
+tr:last-child td { border-bottom: 0; }
+
+td.id, td.hp { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .85rem; }
+td.nama { font-weight: 600; }
+
+/* Baris yang baru masuk sejak halaman dibuka ditandai, supaya petugas yang
+   sedang menunggu kiriman tahu persis apa yang berubah. */
+tr.baru td { background: rgba(47,125,81,.09); }
+tr.baru td.nama::after { content: " baru"; color: var(--aman); font-size: .7rem; font-weight: 700; }
+
+.bungkus-tabel {
+  border: 1px solid var(--garis);
+  border-radius: .8rem;
+  background: rgba(255,255,255,.8);
+  overflow: hidden;
+}
+
+.kaki-tabel { padding: .7rem; text-align: center; font-size: .82rem; color: var(--tinta-redup); }
+.kosong { padding: 2.5rem 1rem; text-align: center; color: var(--tinta-redup); }
+</style>
+</head>
+<body class="badan-scan">
+
+<header class="kepala">
+  <div>
+    <h1 class="kepala-judul">Data Member PAM-PLUS</h1>
+    <p class="kepala-sub" id="kabar">memuat…</p>
+  </div>
+  <a class="tombol-kecil" href="/">← Kiosk</a>
+</header>
+
+<main class="panggung-scan">
+
+  <div class="papan-nilai">
+    <div class="nilai"><b id="n-total">–</b><span>Member</span></div>
+    <div class="nilai" id="kotak-baru"><b id="n-baru">0</b><span>Baru</span></div>
+    <div class="nilai" id="kotak-tarik"><b id="n-tarik">–</b><span>Tarik terakhir</span></div>
+  </div>
+
+  <div class="kotak-cari">
+    <input id="cari" type="search" placeholder="Cari nama, nomor kartu, atau nomor HP…"
+           autocomplete="off" spellcheck="false">
+    <button type="button" id="tarik">Tarik sekarang</button>
+  </div>
+
+  <div class="bungkus-tabel">
+    <table>
+      <thead>
+        <tr><th>Nama</th><th>ID PAM</th><th>Nomor HP</th></tr>
+      </thead>
+      <tbody id="isi"></tbody>
+    </table>
+    <p class="kaki-tabel" id="kaki"></p>
+  </div>
+
+</main>
+
+<script>
+'use strict';
+
+var JEDA_SEGAR_MS = 10000;   // halaman menyegarkan diri
+/*
+ * Penanda "baru" berdasarkan WAKTU, bukan daftar id yang pernah terlihat.
+ *
+ * Versi sebelumnya menghitung setiap id yang belum pernah muncul sebagai
+ * kedatangan baru — sehingga mengganti kata pencarian saja sudah membuat
+ * ratusan baris ditandai baru. Membandingkan waktu perbaruan tiap baris
+ * terhadap saat halaman dibuka memberi jawaban yang sama benar apa pun yang
+ * sedang dicari.
+ */
+var dibukaPada = new Date().toISOString();
+var totalTerakhir = null;
+var jumlahBaru = 0;
+var timerKetik = null;
+
+var elCari = document.getElementById('cari');
+var elIsi = document.getElementById('isi');
+
+function jam(iso) {
+  if (!iso) return '–';
+  var d = new Date(iso);
+  return String(d.getHours()).padStart(2, '0') + '.' + String(d.getMinutes()).padStart(2, '0');
+}
+
+function muat() {
+  var kata = elCari.value.trim();
+  fetch('/api/member/daftar?batas=300&cari=' + encodeURIComponent(kata))
+    .then(function (r) { return r.json(); })
+    .then(function (d) { gambar(d, kata); })
+    .catch(function () {
+      document.getElementById('kabar').textContent = 'kiosk tidak merespons';
+    });
+}
+
+function gambar(d, kata) {
+  document.getElementById('n-total').textContent = d.total.toLocaleString('id-ID');
+  document.getElementById('n-tarik').textContent = d.tarik.galat ? 'gagal' : jam(d.tarik.waktu);
+  document.getElementById('kotak-tarik').className = 'nilai' + (d.tarik.galat ? ' gagal' : '');
+
+  document.getElementById('kabar').textContent =
+    d.punyaHp.toLocaleString('id-ID') + ' punya nomor HP' +
+    (d.tarik.galat ? ' · gagal menarik: ' + d.tarik.galat : '');
+
+  // Pertambahan jumlah total adalah ukuran yang jujur untuk "member baru
+  // masuk" — tidak terpengaruh kata pencarian yang sedang aktif.
+  if (totalTerakhir !== null && d.total > totalTerakhir) {
+    jumlahBaru += d.total - totalTerakhir;
+  }
+  totalTerakhir = d.total;
+
+  document.getElementById('n-baru').textContent = jumlahBaru;
+  document.getElementById('kotak-baru').className = 'nilai' + (jumlahBaru ? ' baru' : '');
+
+  elIsi.innerHTML = '';
+
+  if (!d.member.length) {
+    elIsi.innerHTML = '<tr><td colspan="3" class="kosong">' +
+      (kata ? 'Tidak ada yang cocok dengan "' + kata + '".' : 'Belum ada data member.') + '</td></tr>';
+  }
+
+  d.member.forEach(function (m) {
+    // Ditandai bila datanya diperbarui setelah halaman ini dibuka.
+    var baru = m.diperbarui && m.diperbarui > dibukaPada;
+
+    var tr = document.createElement('tr');
+    if (baru) tr.className = 'baru';
+    tr.innerHTML =
+      '<td class="nama"></td><td class="id"></td><td class="hp"></td>';
+    // textContent, bukan innerHTML: nama member datang dari pihak ketiga dan
+    // tidak boleh bisa menyuntik markup ke layar petugas.
+    tr.children[0].textContent = m.nama;
+    tr.children[1].textContent = m.id_pam;
+    tr.children[2].textContent = m.nomor_hp || '–';
+    elIsi.append(tr);
+  });
+
+  document.getElementById('kaki').textContent =
+    'Menampilkan ' + d.ditampilkan + ' dari ' + d.total.toLocaleString('id-ID') +
+    (d.ditampilkan >= d.batas ? ' — persempit pencarian untuk melihat sisanya' : '');
+}
+
+elCari.addEventListener('input', function () {
+  clearTimeout(timerKetik);
+  timerKetik = setTimeout(muat, 250);
+});
+
+document.getElementById('tarik').addEventListener('click', function () {
+  var b = this;
+  b.disabled = true;
+  b.textContent = 'Menarik…';
+  fetch('/api/member/tarik', { method: 'POST' })
+    .then(function (r) { return r.json(); })
+    .finally(function () {
+      b.disabled = false;
+      b.textContent = 'Tarik sekarang';
+      muat();
+    });
+});
+
+muat();
+setInterval(muat, JEDA_SEGAR_MS);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Check-in Tamu</title>
+<link rel="stylesheet" href="gaya.css">
+<link rel="stylesheet" href="scan.css">
+</head>
+<body class="badan-scan">
+
+<header class="kepala">
+  <div>
+    <h1 class="kepala-judul">Check-in Tamu</h1>
+    <p class="kepala-sub" id="rekap">memuat…</p>
+  </div>
+  <a class="tombol-kecil" href="/">← Kiosk</a>
+</header>
+
+<main class="panggung-scan">
+
+  <!-- Kamera. Dibungkus agar bingkai bidik bisa ditumpuk di atasnya. -->
+  <section class="kamera">
+    <video id="video" playsinline muted></video>
+    <div class="bidik" id="bidik"><span></span><span></span><span></span><span></span></div>
+    <canvas id="kanvas" hidden></canvas>
+
+    <div class="tirai-kamera" id="tirai-kamera">
+      <p class="tirai-pesan" id="tirai-pesan">Menyiapkan kamera…</p>
+      <button class="tombol tombol-utama" id="tombol-mulai" hidden>Nyalakan Kamera</button>
+    </div>
+  </section>
+
+  <!-- Hasil pemindaian terakhir. -->
+  <section class="hasil" id="hasil" data-status="siaga">
+    <p class="hasil-label" id="hasil-label">Arahkan QR ke kamera</p>
+    <p class="hasil-nama" id="hasil-nama">—</p>
+    <p class="hasil-detail" id="hasil-detail"></p>
+  </section>
+
+  <!-- Jalan keluar ketika QR sobek, pudar, atau kamera bermasalah. -->
+  <form class="manual" id="manual">
+    <label for="kode-manual">Ketik kode manual</label>
+    <div class="manual-baris">
+      <input id="kode-manual" name="kode" maxlength="8" autocomplete="off"
+             spellcheck="false" placeholder="A7K9" inputmode="latin">
+      <button class="tombol tombol-sunyi" type="submit">Check-in</button>
+    </div>
+  </form>
+
+  <section class="riwayat">
+    <h2>Baru saja</h2>
+    <ol id="riwayat" class="riwayat-daftar"><li class="riwayat-kosong">Belum ada pemindaian.</li></ol>
+  </section>
+
+</main>
+
+<script src="/vendor/jsQR.js"></script>
+<script src="scan.js"></script>
+</body>
+</html>

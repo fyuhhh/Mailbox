@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rekaman Tersimpan</title>
+<link rel="stylesheet" href="gaya.css">
+<link rel="stylesheet" href="scan.css">
+<style>
+/* =============================================================================
+   Daftar rekaman tersimpan.
+
+   Dipakai PETUGAS di laptop, bukan tamu di layar 43" — jadi memakai satuan
+   responsif biasa dan boleh digulir, sama seperti halaman check-in.
+   ========================================================================== */
+
+.daftar { display: grid; gap: .9rem; }
+
+.rekaman {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  padding: .9rem 1.1rem;
+  border: 1px solid var(--garis);
+  border-radius: .9rem;
+  background: var(--kaca-tebal);
+}
+
+.rekaman-info b { display: block; font-size: 1.05rem; font-weight: 800; }
+.rekaman-info small { color: var(--tinta-redup); font-size: .85rem; }
+
+.rekaman-aksi { display: flex; gap: .5rem; }
+
+.rekaman-aksi button {
+  height: 2.6rem;
+  padding: 0 1rem;
+  border: 1px solid var(--garis);
+  border-radius: .6rem;
+  background: rgba(255,255,255,.6);
+  color: var(--tinta);
+  font: inherit;
+  font-size: .9rem;
+  font-weight: 600;
+}
+
+.rekaman-aksi .hapus { color: var(--bahaya); border-color: rgba(194,56,75,.35); }
+.rekaman-aksi button:active { transform: scale(.97); }
+
+/* Baris yang sedang diputar melebar menjadi pemutar. */
+.rekaman.terbuka { grid-template-columns: 1fr; }
+.rekaman video { width: 100%; margin-top: .8rem; border-radius: .6rem; background: #000; }
+
+.kosong {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--tinta-redup);
+  border: 1px dashed var(--garis);
+  border-radius: .9rem;
+}
+
+.ringkas {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  font-size: .9rem;
+  color: var(--tinta-redup);
+}
+</style>
+</head>
+<body class="badan-scan">
+
+<header class="kepala">
+  <div>
+    <h1 class="kepala-judul">Rekaman Tersimpan</h1>
+    <p class="kepala-sub" id="ringkas">memuat…</p>
+  </div>
+  <a class="tombol-kecil" href="/">← Kiosk</a>
+</header>
+
+<main class="panggung-scan">
+  <p class="ringkas">
+    <span>Tersimpan di PC ini — tidak akan hilang meski internet mati.</span>
+    <button class="tombol-kecil" type="button" data-segarkan>Segarkan</button>
+  </p>
+  <div class="daftar" id="daftar"></div>
+</main>
+
+<script>
+'use strict';
+
+var daftar = document.getElementById('daftar');
+
+function muat() {
+  fetch('/api/rekaman')
+    .then(function (r) { return r.json(); })
+    .then(gambar)
+    .catch(function () {
+      daftar.innerHTML = '<div class="kosong">Kiosk tidak merespons.</div>';
+    });
+}
+
+function gambar(data) {
+  document.getElementById('ringkas').textContent =
+    data.total + ' rekaman · ' + data.totalMB + ' MB';
+
+  if (!data.total) {
+    daftar.innerHTML = '<div class="kosong">Belum ada rekaman.</div>';
+    return;
+  }
+
+  daftar.innerHTML = '';
+  data.rekaman.forEach(function (r) {
+    var baris = document.createElement('div');
+    baris.className = 'rekaman';
+    baris.dataset.berkas = r.berkas;
+
+    var jam = r.dibuat ? r.dibuat.slice(11, 16) : '';
+    var tgl = r.dibuat ? r.dibuat.slice(8, 10) + '/' + r.dibuat.slice(5, 7) : '';
+
+    baris.innerHTML =
+      '<div class="rekaman-info">' +
+        '<b>' + (r.nama || 'Tamu terhapus') + '</b>' +
+        '<small>' + r.kode + ' · ' + r.ukuranMB + ' MB · ' + tgl + ' ' + jam + '</small>' +
+      '</div>' +
+      '<div class="rekaman-aksi">' +
+        '<button type="button" data-putar>Putar</button>' +
+        '<button type="button" class="hapus" data-hapus>Hapus</button>' +
+      '</div>';
+
+    daftar.append(baris);
+  });
+}
+
+daftar.addEventListener('click', function (ev) {
+  var baris = ev.target.closest('.rekaman');
+  if (!baris) return;
+  var berkas = baris.dataset.berkas;
+
+  if (ev.target.closest('[data-putar]')) {
+    if (baris.querySelector('video')) return;   // sudah terbuka
+    var v = document.createElement('video');
+    v.src = '/rekaman/' + encodeURIComponent(berkas);
+    v.controls = true;
+    v.playsInline = true;
+    baris.classList.add('terbuka');
+    baris.append(v);
+    v.play().catch(function () {});
+    return;
+  }
+
+  if (ev.target.closest('[data-hapus]')) {
+    // Konfirmasi wajib: berkasnya benar-benar dihapus, dan rekaman ucapan tamu
+    // tidak bisa diulang setelah acara selesai.
+    var nama = baris.querySelector('b').textContent;
+    if (!confirm('Hapus rekaman ' + nama + '?\nBerkasnya akan hilang permanen.')) return;
+
+    fetch('/api/rekaman/' + encodeURIComponent(berkas), { method: 'DELETE' })
+      .then(function (r) { return r.json(); })
+      .then(function (h) {
+        if (h.ok) muat();
+        else alert('Gagal menghapus: ' + (h.galat || 'tidak diketahui'));
+      })
+      .catch(function () { alert('Kiosk tidak merespons.'); });
+  }
+});
+
+document.querySelector('[data-segarkan]').addEventListener('click', muat);
+muat();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "mailbox-kiosk",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Kiosk pencetak struk QR untuk undangan digital HUT perusahaan",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "cek-printer": "node src/cek-printer.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "jsqr": "^1.4.0",
+    "qrcode": "^1.5.4"
+  }
+}

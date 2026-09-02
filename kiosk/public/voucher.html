@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Persiapan Acara</title>
+<link rel="stylesheet" href="gaya.css">
+<link rel="stylesheet" href="scan.css">
+<style>
+.papan-nilai { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; margin-bottom: 1rem; }
+.papan-dua { grid-template-columns: repeat(2, 1fr); }
+
+.bagian {
+  margin: 1.6rem 0 .8rem;
+  font-size: .74rem;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--tinta-redup);
+}
+
+.bagian:first-of-type { margin-top: 0; }
+
+.nilai {
+  padding: .9rem;
+  border: 1px solid var(--garis);
+  border-radius: .7rem;
+  background: rgba(255,255,255,.75);
+  text-align: center;
+}
+
+.nilai b { display: block; font-size: 1.7rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.nilai span { font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: var(--tinta-redup); }
+.nilai.sisa b { color: var(--aman); }
+.nilai.sisa.menipis b { color: var(--bahaya); }
+.nilai.terpakai b { color: var(--ungu); }
+
+.alat { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: 1rem; }
+
+.alat button {
+  height: 2.9rem;
+  padding: 0 1.1rem;
+  border: 1px solid var(--garis);
+  border-radius: .7rem;
+  background: rgba(255,255,255,.75);
+  color: var(--tinta);
+  font: inherit;
+  font-size: .92rem;
+  font-weight: 600;
+}
+
+.alat button.bahaya { color: var(--bahaya); border-color: rgba(194,56,75,.35); }
+.alat button:disabled { opacity: .5; }
+
+table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+
+th {
+  padding: .6rem .7rem;
+  background: #efeaf7;
+  text-align: left;
+  font-size: .7rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--tinta-redup);
+  border-bottom: 1px solid var(--garis);
+}
+
+td { padding: .6rem .7rem; border-bottom: 1px solid rgba(74,53,104,.08); }
+tr:last-child td { border-bottom: 0; }
+
+td.kode { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-weight: 700; }
+
+.tanda {
+  display: inline-block;
+  padding: .15rem .6rem;
+  border-radius: 99rem;
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+.tanda.kosong  { background: rgba(47,125,81,.14);  color: var(--aman); }
+.tanda.terpakai { background: rgba(107,78,143,.14); color: var(--ungu); }
+
+.bungkus-tabel {
+  border: 1px solid var(--garis);
+  border-radius: .8rem;
+  background: rgba(255,255,255,.8);
+  overflow: hidden;
+}
+
+.catatan { margin-bottom: 1rem; font-size: .88rem; color: var(--tinta-redup); }
+
+.kunci {
+  max-width: 22rem;
+  margin: 4rem auto;
+  padding: 2rem 1.7rem;
+  border: 1px solid var(--garis);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, .8);
+  text-align: center;
+}
+
+.kunci h2 { margin: 0 0 .4rem; font-size: 1.15rem; }
+.kunci p { margin: 0 0 1.4rem; font-size: .88rem; color: var(--tinta-redup); }
+
+.kunci input {
+  width: 100%;
+  height: 3rem;
+  padding: 0 .9rem;
+  border: 1px solid var(--garis);
+  border-radius: .7rem;
+  background: #fff;
+  color: var(--tinta);
+  font: inherit;
+  font-size: 1rem;
+  text-align: center;
+  letter-spacing: .12em;
+}
+
+.kunci input:focus { outline: 2px solid var(--emas); outline-offset: 1px; }
+
+.kunci button {
+  width: 100%;
+  height: 3rem;
+  margin-top: .7rem;
+  border: 0;
+  border-radius: .7rem;
+  background: var(--emas);
+  color: #1a1405;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.kunci button:disabled { opacity: .5; }
+.kunci .galat { margin: .9rem 0 0; color: var(--bahaya); font-weight: 600; }
+</style>
+</head>
+<body class="badan-scan">
+
+<header class="kepala">
+  <div>
+    <h1 class="kepala-judul">Persiapan Acara</h1>
+    <p class="kepala-sub" id="kabar">memuat…</p>
+  </div>
+  <a class="tombol-kecil" href="/">← Kiosk</a>
+</header>
+
+<main class="panggung-scan">
+
+  <!-- Kunci: isi halaman baru digambar setelah sandi diterima. Yang menjaga
+       sebenarnya adalah server — bagian ini hanya yang terlihat. -->
+  <form class="kunci" id="kunci">
+    <h2>Halaman Terkunci</h2>
+    <p>Berisi daftar kode Gift Voucher. Masukkan sandi petugas.</p>
+    <input type="password" id="sandi" autocomplete="off" autofocus placeholder="sandi petugas">
+    <button type="submit">Buka</button>
+    <p class="galat" id="galat" hidden></p>
+  </form>
+
+  <div id="isi-halaman" hidden>
+
+  <h2 class="bagian">Nomor Tamu</h2>
+
+  <div class="papan-nilai papan-dua">
+    <div class="nilai"><b id="n-tamu">–</b><span>Tamu terdaftar</span></div>
+    <div class="nilai"><b id="n-berikut">–</b><span>Nomor berikutnya</span></div>
+  </div>
+
+  <p class="catatan">
+    Reset mengosongkan daftar tamu dan memulai penomoran dari 001 lagi. QR yang
+    sudah tercetak tidak akan dikenali lagi, semua member berhak mengambil
+    voucher lagi, dan kode voucher yang sudah keluar ikut dilepas. Berkas
+    rekaman video tidak ikut terhapus.
+  </p>
+
+  <div class="alat">
+    <button type="button" class="bahaya" data-reset-tamu>Reset nomor tamu ke 001</button>
+  </div>
+
+  <h2 class="bagian">Kode Gift Voucher</h2>
+
+  <div class="papan-nilai">
+    <div class="nilai"><b id="n-total">–</b><span>Total</span></div>
+    <div class="nilai sisa" id="kotak-sisa"><b id="n-sisa">–</b><span>Belum keluar</span></div>
+    <div class="nilai terpakai"><b id="n-pakai">–</b><span>Sudah keluar</span></div>
+  </div>
+
+  <p class="catatan">
+    Satu kode hanya keluar sekali. Cetak ulang untuk tamu yang sama memakai kode
+    yang sama, tidak mengambil dari persediaan.
+  </p>
+
+  <div class="alat">
+    <button type="button" data-segarkan>Segarkan</button>
+    <button type="button" class="bahaya" data-reset>Reset semua ke belum keluar</button>
+  </div>
+
+  <div class="bungkus-tabel">
+    <table>
+      <thead><tr><th>Kode</th><th>Status</th><th>Diberikan ke</th><th>Waktu</th></tr></thead>
+      <tbody id="isi"></tbody>
+    </table>
+  </div>
+
+  </div>
+
+</main>
+
+<script>
+'use strict';
+
+/*
+ * Karcis disimpan di sessionStorage, bukan localStorage.
+ *
+ * sessionStorage ikut hilang saat tab ditutup. Kiosk di acara dipegang banyak
+ * tangan; karcis yang bertahan sampai besok berarti siapa pun yang membuka tab
+ * itu lagi langsung melihat seluruh kode voucher tanpa ditanya apa-apa.
+ */
+var karcis = null;
+try { karcis = sessionStorage.getItem('karcis-petugas'); } catch (e) { karcis = null; }
+
+function simpanKarcis(t) {
+  karcis = t;
+  try { sessionStorage.setItem('karcis-petugas', t); } catch (e) { /* mode privat */ }
+}
+
+function lupakanKarcis() {
+  karcis = null;
+  try { sessionStorage.removeItem('karcis-petugas'); } catch (e) { /* mode privat */ }
+  document.getElementById('isi-halaman').hidden = true;
+  document.getElementById('kunci').hidden = false;
+  document.getElementById('kabar').textContent = 'terkunci';
+}
+
+/** Semua permintaan terjaga lewat sini, supaya karcisnya tidak pernah lupa ikut. */
+function minta(alamat, pilihan) {
+  var o = pilihan || {};
+  o.headers = Object.assign({}, o.headers, { 'x-sandi': karcis || '' });
+  return fetch(alamat, o).then(function (r) {
+    // Karcis kedaluwarsa di tengah acara: halaman mengunci diri kembali alih-alih
+    // menampilkan tabel kosong yang terlihat seperti kode voucher habis.
+    if (r.status === 401) { lupakanKarcis(); throw new Error('perlu-sandi'); }
+    return r.json();
+  });
+}
+
+document.getElementById('kunci').addEventListener('submit', function (ev) {
+  ev.preventDefault();
+  var tombol = this.querySelector('button');
+  var galat = document.getElementById('galat');
+  var sandi = document.getElementById('sandi');
+
+  tombol.disabled = true;
+  galat.hidden = true;
+
+  fetch('/api/masuk', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ sandi: sandi.value }),
+  })
+    .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+    .then(function (h) {
+      if (!h.ok) throw new Error(h.d.galat || 'Sandi salah.');
+      simpanKarcis(h.d.token);
+      sandi.value = '';
+      buka();
+    })
+    .catch(function (e) {
+      galat.textContent = e.message;
+      galat.hidden = false;
+      sandi.select();
+    })
+    .finally(function () { tombol.disabled = false; });
+});
+
+function buka() {
+  document.getElementById('kunci').hidden = true;
+  document.getElementById('isi-halaman').hidden = false;
+  muat();
+}
+
+function jam(iso) {
+  if (!iso) return '–';
+  var d = new Date(iso);
+  var p = function (n) { return String(n).padStart(2, '0'); };
+  return p(d.getDate()) + '/' + p(d.getMonth() + 1) + ' ' + p(d.getHours()) + '.' + p(d.getMinutes());
+}
+
+function muatTamu() {
+  // /api/hidup, bukan /api/status: yang kedua ikut menanyai printer, dan
+  // printer yang mati menahan jawabannya beberapa detik — cukup lama untuk
+  // membuat kedua angka di bawah tampak kosong setiap kali halaman dibuka.
+  fetch('/api/hidup')
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      var n = d.sinkron.total;
+      document.getElementById('n-tamu').textContent = n;
+      // Nomor berikutnya BUKAN sekadar total + 1: AUTOINCREMENT tidak memakai
+      // ulang nomor tamu yang dihapus satuan, jadi angka ini hanya benar
+      // sesudah reset atau bila tidak ada yang pernah dihapus.
+      document.getElementById('n-berikut').textContent =
+        String(n + 1).padStart(3, '0');
+    })
+    .catch(function () {
+      document.getElementById('n-tamu').textContent = '?';
+      document.getElementById('n-berikut').textContent = '?';
+    });
+}
+
+document.querySelector('[data-reset-tamu]').addEventListener('click', function () {
+  if (!confirm('Kosongkan daftar tamu dan mulai dari nomor 001?\n\n' +
+               'QR yang sudah tercetak tidak akan dikenali lagi, setiap member ' +
+               'berhak mengambil Gift Voucher lagi, dan kode voucher yang sudah ' +
+               'keluar ikut dilepas. Rekaman video tetap tersimpan.')) return;
+
+  var b = this;
+  b.disabled = true;
+  minta('/api/tamu/reset', { method: 'POST' })
+    .then(function (h) {
+      alert(h.dihapus + ' tamu dihapus, ' + h.promoDilepas + ' kode voucher dilepas.\n' +
+            'Tamu berikutnya bernomor 001.');
+    })
+    .catch(function () { alert('Kiosk tidak merespons.'); })
+    .finally(function () { b.disabled = false; muatTamu(); });
+});
+
+function muat() {
+  muatTamu();
+  minta('/api/promo/daftar')
+    .then(gambar)
+    .catch(function (e) {
+      if (e.message === 'perlu-sandi') return;
+      document.getElementById('kabar').textContent = 'kiosk tidak merespons';
+    });
+}
+
+function gambar(d) {
+  var pakai = d.total - d.sisa;
+  document.getElementById('n-total').textContent = d.total;
+  document.getElementById('n-sisa').textContent = d.sisa;
+  document.getElementById('n-pakai').textContent = pakai;
+  document.getElementById('kotak-sisa').className = 'nilai sisa' + (d.sisa <= 10 ? ' menipis' : '');
+  document.getElementById('kabar').textContent = d.sisa + ' dari ' + d.total + ' belum keluar';
+
+  var isi = document.getElementById('isi');
+  isi.innerHTML = '';
+
+  if (!d.daftar.length) {
+    isi.innerHTML = '<tr><td colspan="4" style="padding:2.5rem;text-align:center;color:var(--tinta-redup)">' +
+      'Belum ada kode. Muat berkas promo lebih dulu.</td></tr>';
+    return;
+  }
+
+  d.daftar.forEach(function (k) {
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td class="kode"></td>' +
+      '<td><span class="tanda ' + (k.dipakai ? 'terpakai' : 'kosong') + '">' +
+        (k.dipakai ? 'sudah keluar' : 'belum') + '</span></td>' +
+      '<td class="ke"></td><td class="w"></td>';
+    tr.querySelector('.kode').textContent = k.kode;
+    tr.querySelector('.ke').textContent = k.dipakai_oleh || '–';
+    tr.querySelector('.w').textContent = jam(k.dipakai_pada);
+    isi.append(tr);
+  });
+}
+
+document.querySelector('[data-segarkan]').addEventListener('click', muat);
+
+document.querySelector('[data-reset]').addEventListener('click', function () {
+  // Konfirmasi wajib: kode yang sudah tercetak dan dibawa pulang tamu akan
+  // bisa keluar lagi untuk orang lain, sehingga dua orang memegang kode sama.
+  if (!confirm('Kembalikan SEMUA kode ke status belum keluar?\n\n' +
+               'Kode yang sudah tercetak dan dibawa tamu akan bisa keluar lagi ' +
+               'untuk orang lain. Lakukan ini hanya sebelum acara dimulai.')) return;
+
+  var b = this;
+  b.disabled = true;
+  minta('/api/promo/reset', { method: 'POST' })
+    .then(function (h) { alert(h.dilepas + ' kode dikembalikan. Sisa sekarang ' + h.sisa + '.'); })
+    .catch(function () { alert('Kiosk tidak merespons.'); })
+    .finally(function () { b.disabled = false; muat(); });
+});
+
+// Karcis dari kunjungan sebelumnya di tab yang sama langsung dipakai; kalau
+// server sudah menyalakan ulang, minta() akan mengunci halaman ini kembali.
+if (karcis) buka();
+setInterval(function () { if (karcis) muat(); }, 15000);
+</script>
+
+</body>
+</html>
