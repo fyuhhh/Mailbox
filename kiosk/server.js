@@ -47,21 +47,56 @@ function alamatLan() {
   return null;
 }
 
+/** Alamat yang hanya bisa dibuka dari dalam jaringan yang sama. */
+function alamatLokal(url) {
+  return /localhost|127\.0\.0\.1|\b192\.168\.|\b10\.|\b172\.(1[6-9]|2\d|3[01])\./i.test(url);
+}
+
+/**
+ * Tentukan alamat server undangan.
+ *
+ * BASE_URL yang kosong TIDAK lagi ditebak. Dulu ia jatuh ke alamat LAN mesin
+ * ini, dan akibatnya jauh melampaui daftar member: seluruh QR di struk ikut
+ * menunjuk ke sana. Tamu memindai, ponselnya tidak berada di jaringan yang
+ * sama, dan yang muncul adalah halaman gagal — sesudah struknya tercetak,
+ * sesudah tamunya pergi. Kiosk yang menolak menyala sambil menyebutkan
+ * penyebabnya jauh lebih baik daripada kiosk yang menyala lalu mencetak
+ * ratusan QR yang tidak bisa dibuka siapa pun.
+ */
 function tentukanBaseUrl() {
   const mentah = (process.env.BASE_URL || '').trim();
   const portUndangan = Number(process.env.UNDANGAN_PORT) || 5010;
 
-  if (mentah && mentah.toUpperCase() !== 'AUTO') {
+  if (!mentah) {
+    console.error('\n  ============================================================');
+    console.error('    KIOSK TIDAK BISA MENYALA — BASE_URL belum diisi');
+    console.error('  ============================================================\n');
+    console.error('    Buka berkas  kiosk\\.env  lalu tambahkan baris ini:\n');
+    console.error('        BASE_URL=https://undangan.opsjobs.id\n');
+    console.error('    Alamat itu menentukan dua hal sekaligus:');
+    console.error('      - dari mana daftar member ditarik');
+    console.error('      - ke mana QR di struk menunjuk\n');
+    console.error('    Menebaknya berarti mencetak QR yang tidak bisa dibuka tamu.\n');
+    process.exit(1);
+  }
+
+  if (mentah.toUpperCase() !== 'AUTO') {
     return mentah.toUpperCase().replace(/\/+$/, '');
   }
 
   const ip = alamatLan();
-  if (!ip) {
-    console.warn('\n  ! BASE_URL=AUTO tetapi tidak ada alamat LAN yang terdeteksi.');
-    console.warn('    QR akan menunjuk ke localhost dan TIDAK bisa dibuka dari ponsel.\n');
-    return `HTTP://LOCALHOST:${portUndangan}`;
-  }
-  return `HTTP://${ip}:${portUndangan}`;
+  const alamat = ip ? `HTTP://${ip}:${portUndangan}` : `HTTP://LOCALHOST:${portUndangan}`;
+
+  console.warn('\n  ============================================================');
+  console.warn('    BASE_URL=AUTO — HANYA UNTUK UJI COBA DI MEJA');
+  console.warn('  ============================================================\n');
+  console.warn(`    Kiosk akan memakai ${alamat}`);
+  console.warn('    QR di struk menunjuk ke sana, dan hanya bisa dibuka dari');
+  console.warn('    jaringan yang sama. Ponsel tamu TIDAK akan bisa membukanya.\n');
+  console.warn('    Untuk acara, ganti isi BASE_URL di kiosk\\.env menjadi:');
+  console.warn('        BASE_URL=https://undangan.opsjobs.id\n');
+
+  return alamat;
 }
 
 const konf = {
@@ -634,6 +669,7 @@ app.get('/api/basis', butuhSandi, (_req, res) => {
       sedang: keadaanMember.sedang,
       sumber: konf.baseUrl,
       adaSecret: Boolean(konf.secret),
+      sumberLokal: alamatLokal(konf.baseUrl),
     },
   });
 });
@@ -1174,6 +1210,26 @@ app.listen(konf.port, '127.0.0.1', () => {
    * dalamnya, dan itu baru ketahuan di kasir, saat tamu sudah pergi membawa
    * kertas yang tidak berlaku.
    */
+  /*
+   * Alamat lokal diperingatkan setiap kali menyala, bukan sekali di awal.
+   *
+   * Petugas acara tidak membaca gulungan log; yang dilihat hanya beberapa baris
+   * terakhir di jendela hitam. Peringatan yang tergulung ke atas sama saja
+   * dengan tidak ada.
+   */
+  if (alamatLokal(konf.baseUrl)) {
+    console.warn('\n  ============================================================');
+    console.warn('    PERINGATAN: alamat undangan menunjuk ke jaringan lokal');
+    console.warn('  ============================================================\n');
+    console.warn(`    ${konf.baseUrl}\n`);
+    console.warn('    Akibatnya, sekarang juga:');
+    console.warn('      - QR di struk TIDAK bisa dibuka ponsel tamu');
+    console.warn('      - daftar member ditarik dari server lokal, bukan VPS\n');
+    console.warn('    Perbaiki di kiosk\\.env, satu baris:');
+    console.warn('        BASE_URL=https://undangan.opsjobs.id\n');
+    console.warn('    lalu jalankan ulang kiosk.\n');
+  }
+
   if (promo.total() === 0) {
     console.warn('\n  ! Belum ada kode Gift Voucher.');
     console.warn('    Isi kiosk/benih/kode-voucher.txt lalu jalankan ulang,');

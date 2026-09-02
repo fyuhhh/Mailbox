@@ -292,6 +292,23 @@ function gambarSinkron(s) {
   var judul = document.getElementById('sinkron-judul');
   var rinci = document.getElementById('sinkron-rinci');
 
+  /*
+   * Alamat lokal diperiksa lebih dulu dari yang lain.
+   *
+   * Penarikan dari server lokal BERHASIL — tidak ada galat, waktunya baru,
+   * jumlahnya masuk akal. Semuanya terlihat sehat, hanya datanya yang berasal
+   * dari server yang salah. Tanpa pemeriksaan ini, panel akan menampilkan
+   * "Member tersinkron" berwarna hijau di atas enam belas ribu baris palsu.
+   */
+  if (s.sumberLokal) {
+    kotak.className = 'sinkron buruk';
+    judul.textContent = 'SALAH SUMBER — menarik dari server lokal, bukan VPS';
+    rinci.innerHTML = 'Sekarang menarik dari <b>' + s.sumber + '</b>. ' +
+      'QR di struk juga menunjuk ke sana dan tidak bisa dibuka ponsel tamu. ' +
+      'Perbaiki <b>BASE_URL=https://undangan.opsjobs.id</b> di kiosk/.env lalu jalankan ulang kiosk.';
+    return;
+  }
+
   if (!s.adaSecret) {
     kotak.className = 'sinkron buruk';
     judul.textContent = 'SYNC_SECRET kosong — member tidak akan pernah masuk';
