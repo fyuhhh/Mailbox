@@ -10,6 +10,11 @@ data/
 .env.*
 !.env.example
 
+# Data awal yang ditanam ke PC baru. Berisi 16 ribu nama dan nomor telepon
+# member asli, serta persediaan kode voucher — dua-duanya tidak boleh terbit.
+# Folder ini berpindah antar-PC lewat salinan folder, bukan lewat repo ini.
+benih/
+
 # Kode gift voucher. Repo ini publik; kodenya tidak boleh ikut terbaca.
 *PromoCode*.xlsx
 promocode-*.xlsx

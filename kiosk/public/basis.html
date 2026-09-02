@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data Kiosk</title>
+<link rel="stylesheet" href="gaya.css">
+<link rel="stylesheet" href="scan.css">
+<style>
+/*
+ * Halaman ini melebar, tidak seperti halaman petugas lainnya.
+ *
+ * gaya.css memusatkan body untuk kiosk 9:16, dan scan.css membatasi panggung ke
+ * 34rem — cocok untuk daftar sempit, tetapi tabel tamu punya sebelas kolom.
+ * Tanpa penyetelan ini, grid-nya melar melewati batasnya sendiri dan seluruh
+ * isi halaman terdorong ke kanan, keluar layar.
+ */
+.badan-scan { display: block; place-content: initial; height: auto; }
+.panggung-scan { max-width: min(96rem, 100%); }
+.panggung-scan > * { min-width: 0; }
+
+.kunci {
+  max-width: 22rem; margin: 4rem auto; padding: 2rem 1.7rem;
+  border: 1px solid var(--garis); border-radius: 1rem;
+  background: rgba(255,255,255,.8); text-align: center;
+}
+.kunci h2 { margin: 0 0 .4rem; font-size: 1.15rem; }
+.kunci p  { margin: 0 0 1.4rem; font-size: .88rem; color: var(--tinta-redup); }
+.kunci input {
+  width: 100%; height: 3rem; padding: 0 .9rem; border: 1px solid var(--garis);
+  border-radius: .7rem; background: #fff; color: var(--tinta);
+  font: inherit; font-size: 1rem; text-align: center; letter-spacing: .12em;
+}
+.kunci button {
+  width: 100%; height: 3rem; margin-top: .7rem; border: 0; border-radius: .7rem;
+  background: var(--emas); color: #1a1405; font: inherit; font-size: 1rem; font-weight: 800;
+}
+.kunci button:disabled { opacity: .5; }
+.kunci .galat { margin: .9rem 0 0; color: var(--bahaya); font-weight: 600; }
+
+.tab { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+
+.tab button {
+  height: 2.7rem; padding: 0 1rem; border: 1px solid var(--garis); border-radius: .7rem;
+  background: rgba(255,255,255,.7); color: var(--tinta); font: inherit; font-size: .9rem; font-weight: 600;
+}
+
+.tab button[aria-selected="true"] { background: var(--ungu); border-color: var(--ungu); color: #fff; }
+.tab button small { display: block; font-size: .68rem; font-weight: 500; opacity: .7; }
+
+.alat { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: 1rem; }
+
+.alat input[type="search"] {
+  flex: 1; min-width: 12rem; height: 2.9rem; padding: 0 .9rem;
+  border: 1px solid var(--garis); border-radius: .7rem; background: #fff;
+  color: var(--tinta); font: inherit; font-size: .95rem;
+}
+
+.alat button, .alat a {
+  display: inline-flex; align-items: center; height: 2.9rem; padding: 0 1.1rem;
+  border: 1px solid var(--garis); border-radius: .7rem; background: rgba(255,255,255,.75);
+  color: var(--tinta); font: inherit; font-size: .92rem; font-weight: 600;
+  text-decoration: none;
+}
+
+.alat button:disabled { opacity: .4; }
+
+.bungkus-tabel {
+  border: 1px solid var(--garis); border-radius: .8rem;
+  background: rgba(255,255,255,.8); overflow: auto; max-height: 62vh;
+}
+
+table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+
+th {
+  position: sticky; top: 0; z-index: 1;
+  padding: .6rem .7rem; background: #efeaf7; text-align: left;
+  font-size: .68rem; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--tinta-redup); border-bottom: 1px solid var(--garis); white-space: nowrap;
+}
+
+td {
+  padding: .55rem .7rem; border-bottom: 1px solid rgba(74,53,104,.08);
+  max-width: 22rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+td.angka { font-variant-numeric: tabular-nums; }
+td.kosong { color: var(--tinta-redup); }
+tr:last-child td { border-bottom: 0; }
+
+.kaki { display: flex; align-items: center; gap: .6rem; margin-top: .9rem; font-size: .88rem; color: var(--tinta-redup); }
+.kaki button { height: 2.4rem; padding: 0 .9rem; border: 1px solid var(--garis); border-radius: .6rem; background: rgba(255,255,255,.75); color: var(--tinta); font: inherit; font-weight: 600; }
+.kaki button:disabled { opacity: .4; }
+
+.catatan { margin-bottom: 1rem; font-size: .86rem; color: var(--tinta-redup); }
+.catatan b { color: var(--tinta); }
+</style>
+</head>
+<body class="badan-scan">
+
+<header class="kepala">
+  <div>
+    <h1 class="kepala-judul">Data Kiosk</h1>
+    <p class="kepala-sub" id="kabar">terkunci</p>
+  </div>
+  <a class="tombol-kecil" href="/">← Kiosk</a>
+</header>
+
+<main class="panggung-scan">
+
+  <form class="kunci" id="kunci">
+    <h2>Halaman Terkunci</h2>
+    <p>Berisi data tamu, member, dan kode voucher. Masukkan sandi petugas.</p>
+    <input type="password" id="sandi" autocomplete="off" autofocus placeholder="sandi petugas">
+    <button type="submit">Buka</button>
+    <p class="galat" id="galat" hidden></p>
+  </form>
+
+  <div id="isi-halaman" hidden>
+
+    <p class="catatan">
+      Halaman ini <b>hanya membaca</b>. Mengubah dan menghapus tetap lewat halaman
+      masing-masing, supaya tidak ada perubahan yang terjadi tanpa konfirmasi.
+    </p>
+
+    <div class="tab" id="tab" role="tablist"></div>
+
+    <div class="alat">
+      <input type="search" id="cari" placeholder="cari di semua kolom — nama, nomor HP, kode…">
+      <button type="button" id="segarkan">Segarkan</button>
+      <a id="unduh" href="#">Unduh CSV</a>
+    </div>
+
+    <div class="bungkus-tabel">
+      <table>
+        <thead><tr id="kepala-tabel"></tr></thead>
+        <tbody id="isi"></tbody>
+      </table>
+    </div>
+
+    <div class="kaki">
+      <button type="button" id="mundur">←</button>
+      <span id="posisi">–</span>
+      <button type="button" id="maju">→</button>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+'use strict';
+
+var karcis = null;
+try { karcis = sessionStorage.getItem('karcis-petugas'); } catch (e) { karcis = null; }
+
+function simpanKarcis(t) {
+  karcis = t;
+  try { sessionStorage.setItem('karcis-petugas', t); } catch (e) { /* mode privat */ }
+}
+
+function lupakanKarcis() {
+  karcis = null;
+  try { sessionStorage.removeItem('karcis-petugas'); } catch (e) { /* mode privat */ }
+  document.getElementById('isi-halaman').hidden = true;
+  document.getElementById('kunci').hidden = false;
+  document.getElementById('kabar').textContent = 'terkunci';
+}
+
+function minta(alamat) {
+  return fetch(alamat, { headers: { 'x-sandi': karcis || '' } }).then(function (r) {
+    if (r.status === 401) { lupakanKarcis(); throw new Error('perlu-sandi'); }
+    return r.json();
+  });
+}
+
+document.getElementById('kunci').addEventListener('submit', function (ev) {
+  ev.preventDefault();
+  var tombol = this.querySelector('button');
+  var galat = document.getElementById('galat');
+  var sandi = document.getElementById('sandi');
+
+  tombol.disabled = true;
+  galat.hidden = true;
+
+  fetch('/api/masuk', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ sandi: sandi.value }),
+  })
+    .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+    .then(function (h) {
+      if (!h.ok) throw new Error(h.d.galat || 'Sandi salah.');
+      simpanKarcis(h.d.token);
+      sandi.value = '';
+      buka();
+    })
+    .catch(function (e) {
+      galat.textContent = e.message;
+      galat.hidden = false;
+      sandi.select();
+    })
+    .finally(function () { tombol.disabled = false; });
+});
+
+var pilihan = null;   // { basis, tabel }
+var hal = 1;
+var cariTerakhir = '';
+
+function buka() {
+  document.getElementById('kunci').hidden = true;
+  document.getElementById('isi-halaman').hidden = false;
+  muatDaftar();
+}
+
+function muatDaftar() {
+  minta('/api/basis').then(function (d) {
+    var tab = document.getElementById('tab');
+    tab.innerHTML = '';
+
+    d.basis.forEach(function (b) {
+      b.tabel.forEach(function (t) {
+        var tombol = document.createElement('button');
+        tombol.type = 'button';
+        tombol.setAttribute('role', 'tab');
+        tombol.innerHTML = '<span></span><small></small>';
+        tombol.querySelector('span').textContent = b.judul;
+        tombol.querySelector('small').textContent = t.baris.toLocaleString('id-ID') + ' baris';
+        tombol.addEventListener('click', function () {
+          pilihan = { basis: b.kunci, tabel: t.nama };
+          hal = 1;
+          document.getElementById('cari').value = '';
+          cariTerakhir = '';
+          tandaiTab();
+          muatBaris();
+        });
+        tombol.dataset.basis = b.kunci;
+        tombol.dataset.tabel = t.nama;
+        tab.append(tombol);
+      });
+    });
+
+    if (!pilihan && d.basis.length && d.basis[0].tabel.length) {
+      pilihan = { basis: d.basis[0].kunci, tabel: d.basis[0].tabel[0].nama };
+    }
+    tandaiTab();
+    if (pilihan) muatBaris();
+  }).catch(function (e) {
+    if (e.message !== 'perlu-sandi') document.getElementById('kabar').textContent = 'kiosk tidak merespons';
+  });
+}
+
+function tandaiTab() {
+  Array.prototype.forEach.call(document.querySelectorAll('#tab button'), function (b) {
+    var aktif = pilihan && b.dataset.basis === pilihan.basis && b.dataset.tabel === pilihan.tabel;
+    b.setAttribute('aria-selected', aktif ? 'true' : 'false');
+  });
+
+  if (!pilihan) return;
+  document.getElementById('unduh').href =
+    '/api/basis/csv?basis=' + encodeURIComponent(pilihan.basis) +
+    '&tabel=' + encodeURIComponent(pilihan.tabel);
+}
+
+function muatBaris() {
+  if (!pilihan) return;
+
+  var alamat = '/api/basis/baris?basis=' + encodeURIComponent(pilihan.basis) +
+    '&tabel=' + encodeURIComponent(pilihan.tabel) +
+    '&hal=' + hal + '&cari=' + encodeURIComponent(cariTerakhir);
+
+  minta(alamat).then(function (d) {
+    var kepala = document.getElementById('kepala-tabel');
+    kepala.innerHTML = '';
+    d.kolom.forEach(function (k) {
+      var th = document.createElement('th');
+      th.textContent = k;
+      kepala.append(th);
+    });
+
+    var isi = document.getElementById('isi');
+    isi.innerHTML = '';
+
+    if (!d.baris.length) {
+      var kosong = document.createElement('tr');
+      var td = document.createElement('td');
+      td.colSpan = d.kolom.length || 1;
+      td.className = 'kosong';
+      td.style.padding = '2.5rem';
+      td.style.textAlign = 'center';
+      td.textContent = cariTerakhir ? 'Tidak ada yang cocok.' : 'Tabel ini masih kosong.';
+      kosong.append(td);
+      isi.append(kosong);
+    }
+
+    d.baris.forEach(function (r) {
+      var tr = document.createElement('tr');
+      d.kolom.forEach(function (k) {
+        var td = document.createElement('td');
+        var v = r[k];
+        if (v === null || v === undefined || v === '') { td.className = 'kosong'; td.textContent = '–'; }
+        else { if (typeof v === 'number') td.className = 'angka'; td.textContent = String(v); td.title = String(v); }
+        tr.append(td);
+      });
+      isi.append(tr);
+    });
+
+    document.getElementById('posisi').textContent =
+      'Halaman ' + d.hal + ' dari ' + d.halTotal + ' — ' + d.total.toLocaleString('id-ID') + ' baris';
+    document.getElementById('mundur').disabled = d.hal <= 1;
+    document.getElementById('maju').disabled = d.hal >= d.halTotal;
+    document.getElementById('kabar').textContent = pilihan.basis + ' · ' + pilihan.tabel;
+    hal = d.hal;
+  }).catch(function (e) {
+    if (e.message !== 'perlu-sandi') document.getElementById('kabar').textContent = 'gagal memuat';
+  });
+}
+
+document.getElementById('mundur').addEventListener('click', function () { hal -= 1; muatBaris(); });
+document.getElementById('maju').addEventListener('click', function () { hal += 1; muatBaris(); });
+document.getElementById('segarkan').addEventListener('click', muatDaftar);
+
+// Pencarian ditunda sesaat: tabel member berisi enam belas ribu baris, dan
+// menembak satu permintaan per huruf membuat pengetikan terasa tersendat.
+var jedaCari = null;
+document.getElementById('cari').addEventListener('input', function () {
+  var nilai = this.value;
+  clearTimeout(jedaCari);
+  jedaCari = setTimeout(function () {
+    cariTerakhir = nilai;
+    hal = 1;
+    muatBaris();
+  }, 300);
+});
+
+if (karcis) buka();
+</script>
+
+</body>
+</html>

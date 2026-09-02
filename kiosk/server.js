@@ -17,6 +17,8 @@ import { bukaDb } from './src/db.js';
 import { bukaPengaturan } from './src/pengaturan.js';
 import { bukaMember } from './src/member.js';
 import { bukaPromo, bacaBerkasKode } from './src/promo.js';
+import { bukaBasis } from './src/basis.js';
+import { tanamBenih } from './src/benih.js';
 import { buatKodeUnik } from './src/kode.js';
 import { Printer } from './src/printer.js';
 import { Sinkronisasi } from './src/sync.js';
@@ -89,10 +91,20 @@ const FOLDER_VIDEO = path.join(AKAR, 'data', 'video');
 const FOLDER_VIDEO_SEMENTARA = path.join(FOLDER_VIDEO, 'sementara');
 mkdirSync(FOLDER_VIDEO_SEMENTARA, { recursive: true });
 
+/*
+ * Benih ditanam SEBELUM basis data mana pun dibuka.
+ *
+ * bukaDb dan kawan-kawannya membuat berkas kosong kalau belum ada. Kalau benih
+ * ditanam sesudahnya, setiap berkas sudah telanjur ada dan penanaman akan
+ * melewati semuanya — PC baru menyala dengan daftar member kosong.
+ */
+const hasilBenih = tanamBenih(path.join(AKAR, 'benih'), path.join(AKAR, 'data'));
+
 const db = bukaDb(path.join(AKAR, 'data', 'kiosk.db'));
 const pengaturan = bukaPengaturan(path.join(AKAR, 'data', 'pengaturan.json'));
 const member = bukaMember(path.join(AKAR, 'data', 'member.db'));
 const promo = bukaPromo(path.join(AKAR, 'data', 'promo.db'));
+const basis = bukaBasis(path.join(AKAR, 'data'));
 
 /**
  * Cari nama pemilik kartu.
@@ -572,6 +584,45 @@ function butuhSandi(req, res, next) {
  */
 app.get('/api/promo', (_req, res) => {
   res.json(promo.ringkas());
+});
+
+/* ---------------------------- penjelajah data ----------------------------- */
+
+/*
+ * Semuanya di balik sandi yang sama dengan halaman voucher.
+ *
+ * Tabel member berisi enam belas ribu nama dan nomor telepon, dan tabel tamu
+ * memuat nama beserta tautan rekaman wajahnya. Keduanya lebih perlu dijaga
+ * daripada kode voucher, bukan kurang.
+ */
+app.get('/api/basis', butuhSandi, (_req, res) => {
+  res.json({ basis: basis.ringkas() });
+});
+
+app.get('/api/basis/baris', butuhSandi, (req, res) => {
+  try {
+    res.json(basis.baris({
+      basis: String(req.query.basis || ''),
+      tabel: String(req.query.tabel || ''),
+      hal: req.query.hal,
+      batas: req.query.batas,
+      cari: req.query.cari,
+    }));
+  } catch (galat) {
+    res.status(400).json({ galat: galat.message });
+  }
+});
+
+app.get('/api/basis/csv', butuhSandi, (req, res) => {
+  const nama = `${String(req.query.basis || 'data')}-${String(req.query.tabel || 'tabel')}.csv`;
+  try {
+    const isi = basis.csv({ basis: String(req.query.basis || ''), tabel: String(req.query.tabel || '') });
+    res.setHeader('content-type', 'text/csv; charset=utf-8');
+    res.setHeader('content-disposition', `attachment; filename="${nama}"`);
+    res.send(isi);
+  } catch (galat) {
+    res.status(400).json({ galat: galat.message });
+  }
 });
 
 app.get('/api/promo/daftar', butuhSandi, (_req, res) => {
@@ -1057,8 +1108,14 @@ app.listen(konf.port, '127.0.0.1', () => {
     ? `${konf.printerHost}:${konf.printerPort} (jaringan)`
     : `${konf.printerNama} (USB)`;
   console.log(`  Printer     ->  ${tujuanPrinter} ${konf.printerLebar}mm${konf.dryRun ? '  [MODE UJI]' : ''}`);
+  if (hasilBenih.ditanam) {
+    console.log(`  Data awal   ->  ${hasilBenih.ditanam} berkas ditanam (${hasilBenih.nama.join(', ')})`);
+  }
   if (!konf.secret) {
     console.warn('\n  ! SYNC_SECRET kosong — data tamu tidak akan diterima server undangan.');
+  }
+  if (!SANDI_PETUGAS) {
+    console.warn('  ! SANDI_PETUGAS kosong — halaman Persiapan Acara & Data tidak bisa dibuka.');
   }
   console.log('');
 });
