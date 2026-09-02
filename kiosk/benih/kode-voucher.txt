@@ -1,0 +1,24 @@
+# Kode Gift Voucher — persediaan awal kiosk.
+#
+# CARA PAKAI
+#   Tempelkan kode produksi di bawah, satu kode satu baris.
+#   Baris kosong dan baris yang diawali # diabaikan.
+#
+# KAPAN DIBACA
+#   Sekali saja: waktu kiosk pertama kali dijalankan di sebuah PC dan
+#   persediaan kodenya masih kosong. Menjalankan kiosk berulang kali tidak
+#   mengimpor ulang — kode yang sudah keluar tidak akan pernah kembali
+#   menjadi "belum terpakai" hanya karena kiosk dinyalakan lagi.
+#
+#   Kalau kiosk sudah pernah jalan dan kamu ingin mengganti persediaannya,
+#   pakai halaman Persiapan Acara: kosongkan lalu impor berkas baru.
+#
+# CONTOH
+#   p5ltJ3A3xAQG
+#   p5ltarQWpwGa
+#
+# Kode di bawah ini kosong dengan sengaja. Dua puluh kode uji coba yang
+# dipakai selama pengembangan TIDAK disertakan: kode itu akan ditolak kasir
+# saat acara, dan struk yang membawa kode mati lebih buruk daripada kiosk
+# yang jelas-jelas memberi tahu bahwa persediaannya belum diisi.
+

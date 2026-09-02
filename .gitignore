@@ -1,4 +1,3 @@
-node_modules/
 data/
 *.log
 .DS_Store
@@ -10,11 +9,34 @@ data/
 .env.*
 !.env.example
 
-# Data awal yang ditanam ke PC baru. Berisi 16 ribu nama dan nomor telepon
-# member asli, serta persediaan kode voucher — dua-duanya tidak boleh terbit.
-# Folder ini berpindah antar-PC lewat salinan folder, bukan lewat repo ini.
-benih/
+# Data awal yang ditanam ke PC baru.
+#
+# Berkas .db di dalamnya berisi 16 ribu nama dan nomor telepon member asli —
+# data titipan pihak ketiga, bukan milik proyek ini. Berkas itu berpindah
+# antar-PC lewat salinan folder atau flashdisk, tidak lewat repo.
+#
+# Mini PC tidak membutuhkannya: kiosk menarik daftar member sendiri dari
+# server undangan saat mulai dan setiap dua menit sesudahnya, jadi PC baru
+# yang tersambung internet terisi sendiri.
+# Pola ini HARUS menyebut jalur lengkapnya. Pola bertanda garis miring
+# terpaut ke folder tempat .gitignore berada, jadi "benih/*.db" hanya akan
+# cocok dengan benih/ di akar repo — bukan kiosk/benih/ tempat berkasnya
+# sebenarnya berada, dan seluruh isinya akan lolos tanpa peringatan apa pun.
+kiosk/benih/*
 
-# Kode gift voucher. Repo ini publik; kodenya tidak boleh ikut terbaca.
+# Satu-satunya yang ikut: berkas kode voucher, tanpa isinya.
+!kiosk/benih/kode-voucher.txt
+
+# Kode gift voucher produksi. Repo ini publik; kodenya tidak boleh terbaca.
 *PromoCode*.xlsx
 promocode-*.xlsx
+
+# Modul kiosk IKUT disimpan di sini dengan sengaja.
+#
+# Mini PC acara harus bisa "tarik dari repo lalu jalan" tanpa npm install —
+# tanpa ini, PC tanpa internet atau dengan jaringan venue yang tersendat akan
+# berhenti di langkah pemasangan, di tempat dan waktu yang paling buruk.
+# Server undangan tidak punya kendala itu; modulnya dipasang di VPS.
+undangan/node_modules/
+node/
+node.exe

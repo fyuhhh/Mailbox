@@ -106,6 +106,27 @@ const member = bukaMember(path.join(AKAR, 'data', 'member.db'));
 const promo = bukaPromo(path.join(AKAR, 'data', 'promo.db'));
 const basis = bukaBasis(path.join(AKAR, 'data'));
 
+/*
+ * Persediaan kode voucher diisi dari berkas teks, sekali, saat masih kosong.
+ *
+ * Syaratnya "kosong", bukan "belum pernah diimpor". Dengan begitu menjalankan
+ * kiosk berulang kali tidak pernah mengembalikan kode yang sudah keluar menjadi
+ * belum terpakai — dan petugas yang sengaja mengosongkan persediaan lewat
+ * halaman Persiapan Acara mendapat apa yang ia minta, bukan isi lama yang
+ * muncul kembali sendiri.
+ */
+if (promo.total() === 0) {
+  const berkasKode = path.join(AKAR, 'benih', 'kode-voucher.txt');
+  if (existsSync(berkasKode)) {
+    try {
+      const hasil = promo.impor(bacaBerkasKode(berkasKode));
+      if (hasil.masuk) console.log(`  [promo] ${hasil.masuk} kode dimuat dari benih`);
+    } catch (galat) {
+      console.warn('  [promo] gagal memuat kode dari benih:', galat.message);
+    }
+  }
+}
+
 /**
  * Cari nama pemilik kartu.
  *
@@ -1116,6 +1137,19 @@ app.listen(konf.port, '127.0.0.1', () => {
   }
   if (!SANDI_PETUGAS) {
     console.warn('  ! SANDI_PETUGAS kosong — halaman Persiapan Acara & Data tidak bisa dibuka.');
+  }
+
+  /*
+   * Persediaan kosong diberitahukan keras-keras.
+   *
+   * Kiosk tetap melayani tamu tanpa kode — struk voucher tercetak tanpa kode di
+   * dalamnya, dan itu baru ketahuan di kasir, saat tamu sudah pergi membawa
+   * kertas yang tidak berlaku.
+   */
+  if (promo.total() === 0) {
+    console.warn('\n  ! Belum ada kode Gift Voucher.');
+    console.warn('    Isi kiosk/benih/kode-voucher.txt lalu jalankan ulang,');
+    console.warn('    atau impor dari halaman Persiapan Acara.');
   }
   console.log('');
 });
