@@ -42,7 +42,16 @@ export function tanamBenih(folderBenih, folderData) {
    */
   const daftar = readdirSync(folderBenih)
     .filter((n) => !n.startsWith('.'))
-    .filter((n) => !/-(wal|shm|journal)$/.test(n));
+    .filter((n) => !/-(wal|shm|journal)$/.test(n))
+    /*
+     * Hanya basis data dan keadaan tersimpan yang ditanam.
+     *
+     * kode-voucher.txt adalah berkas MASUKAN — dibaca di tempatnya lalu
+     * diimpor ke promo.db. Menyalinnya ke data/ meninggalkan satu tiruan yang
+     * tidak pernah dibaca siapa pun, dan petugas yang menyuntingnya di sana
+     * akan bingung kenapa perubahannya tidak berpengaruh.
+     */
+    .filter((n) => /\.(db|json)$/.test(n));
   let ditanam = 0;
   const nama = [];
 
