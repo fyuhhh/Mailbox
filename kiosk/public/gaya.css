@@ -1162,19 +1162,44 @@ a.tombol {
 .panel h2 { font-size: var(--t-lg); margin-bottom: var(--s-3); }
 .panel-subjudul { margin: var(--s-3) 0 var(--s-2); font-size: var(--t-2xs); }
 
-.rincian { row-gap: var(--s-1); font-size: var(--t-sm); }
+.rincian { row-gap: 0; font-size: var(--t-sm); }
 .rincian dt, .rincian dd { line-height: 1.3; }
 
-.setelan-baris { padding: var(--s-1) 0; }
+.setelan-baris { padding: 0; }
 .setelan-label { font-size: var(--t-sm); }
 .setelan-label small { font-size: var(--t-2xs); }
-.setelan-baris button { width: 3.1rem; height: 3.1rem; font-size: var(--t-md); }
+.setelan-baris button { width: 2.9rem; height: 2.9rem; font-size: var(--t-md); }
 .setelan-nilai { font-size: var(--t-md); }
 
-.panel-tautan a { min-height: 3.4rem; font-size: var(--t-sm); }
+.panel-tautan a { min-height: 2.9rem; font-size: var(--t-xs); }
 .panel-aksi .tombol { height: 3.8rem; font-size: var(--t-sm); }
 
 /* QR yang ditolak: bingkai merah, supaya bedanya dengan "terbaca" terlihat
    dari jarak antre, bukan hanya terbaca dari tulisannya. */
 .kamera-member[data-kena="tolak"] { border-color: var(--bahaya); box-shadow: 0 0 0 .3rem rgba(194, 56, 75, .25); }
 .kamera-member[data-kena="tolak"] .bidik span { border-color: var(--bahaya); }
+
+/* Pemilih kamera di panel petugas. */
+.baris-kamera { align-items: center; }
+
+.panel-pilih {
+  max-width: 17rem;
+  height: 3.1rem;
+  padding: 0 var(--s-2);
+  border: 1px solid var(--garis);
+  border-radius: var(--sudut);
+  background: rgba(255, 255, 255, .8);
+  color: var(--ungu-tua);
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: var(--b-tegas);
+}
+
+.panel-catatan {
+  margin: var(--s-2) 0 0;
+  font-size: var(--t-2xs);
+  line-height: 1.4;
+  color: var(--tinta-redup);
+}
+
+.panel-catatan.buruk { color: var(--bahaya); font-weight: var(--b-tegas); }

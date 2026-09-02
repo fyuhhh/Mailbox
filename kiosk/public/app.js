@@ -226,16 +226,136 @@ let aliranKamera = null;
  * di antara layar, dan pada sebagian perangkat butuh satu sampai dua detik
  * untuk menyala lagi — jeda yang jatuh tepat sebelum hitungan mundur dimulai.
  */
+/*
+ * Kamera yang dipilih petugas, diingat di peramban mesin ini.
+ *
+ * Bukan di server: id perangkat hanya berarti di komputer tempat kamera itu
+ * dicolok, dan kiosk yang sama dijalankan di beberapa PC.
+ */
+const KUNCI_KAMERA = 'kameraPilihan';
+
+function kameraTersimpan() {
+  try { return localStorage.getItem(KUNCI_KAMERA) || ''; } catch { return ''; }
+}
+
+function simpanKamera(id) {
+  try {
+    if (id) localStorage.setItem(KUNCI_KAMERA, id);
+    else localStorage.removeItem(KUNCI_KAMERA);
+  } catch { /* mode privat; pilihan berlaku sampai halaman ditutup */ }
+}
+
+function syaratVideo(deviceId) {
+  const dasar = { width: { ideal: 1280 }, height: { ideal: 720 } };
+  /*
+   * `exact`, bukan `ideal`.
+   *
+   * Dengan `ideal` peramban boleh mengabaikan pilihan petugas dan tetap memakai
+   * kamera bawaannya — persis yang mau dihindari. Kegagalan karena perangkatnya
+   * dicabut ditangani di pemanggilnya, bukan dengan melonggarkan syaratnya.
+   */
+  if (deviceId) return { ...dasar, deviceId: { exact: deviceId } };
+
+  // facingMode hanya berarti di ponsel. Di PC ia dibiarkan sebagai anjuran
+  // supaya webcam eksternal yang tidak melaporkan arah hadap tidak tersingkir.
+  return { ...dasar, facingMode: { ideal: 'user' } };
+}
+
 async function bukaKamera({ audio }) {
   const adaAudio = aliranKamera?.getAudioTracks().length > 0;
   if (aliranKamera && (!audio || adaAudio)) return aliranKamera;
 
   lepasKamera();
-  aliranKamera = await navigator.mediaDevices.getUserMedia({
-    video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: { ideal: 'user' } },
-    audio: audio ? { echoCancellation: true, noiseSuppression: true } : false,
-  });
+
+  const suara = audio ? { echoCancellation: true, noiseSuppression: true } : false;
+  const pilihan = kameraTersimpan();
+
+  try {
+    aliranKamera = await navigator.mediaDevices.getUserMedia({
+      video: syaratVideo(pilihan),
+      audio: suara,
+    });
+  } catch (galat) {
+    /*
+     * Kamera pilihan tidak ada lagi — kabelnya tercabut, atau colokannya pindah
+     * dan sistem memberinya id baru.
+     *
+     * Antrean tidak dihentikan karena itu. Kiosk kembali ke kamera mana pun
+     * yang tersedia dan melupakan pilihan yang sudah mati, supaya percobaan
+     * berikutnya tidak gagal dengan cara yang sama. Petugas bisa memilih ulang
+     * dari panel.
+     */
+    const perangkatHilang = pilihan &&
+      ['OverconstrainedError', 'NotFoundError', 'NotReadableError'].includes(galat.name);
+    if (!perangkatHilang) throw galat;
+
+    console.warn('[kamera] pilihan tersimpan tidak bisa dipakai:', galat.name);
+    simpanKamera('');
+    aliranKamera = await navigator.mediaDevices.getUserMedia({ video: syaratVideo(''), audio: suara });
+  }
+
   return aliranKamera;
+}
+
+/**
+ * Isi pemilih kamera di panel petugas.
+ *
+ * Nama perangkat baru terbaca setelah izin kamera diberikan; sebelum itu
+ * enumerateDevices mengembalikan label kosong. Jadi daftar ini digambar ulang
+ * setiap kali panel dibuka, bukan sekali saat halaman dimuat — saat itu kamera
+ * biasanya sudah pernah menyala dan namanya sudah terbaca.
+ */
+async function segarkanDaftarKamera() {
+  const pilih = $('#pilih-kamera');
+  const kabar = $('#kabar-kamera');
+  if (!pilih || !kabar) return;
+
+  if (!navigator.mediaDevices?.enumerateDevices) {
+    kabar.textContent = 'Peramban ini tidak bisa mendaftar kamera.';
+    kabar.className = 'panel-catatan buruk';
+    return;
+  }
+
+  let daftar = [];
+  try {
+    daftar = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput');
+  } catch {
+    kabar.textContent = 'Daftar kamera tidak bisa dibaca.';
+    kabar.className = 'panel-catatan buruk';
+    return;
+  }
+
+  const tersimpan = kameraTersimpan();
+  pilih.innerHTML = '<option value="">Otomatis</option>';
+
+  daftar.forEach((d, i) => {
+    const opsi = document.createElement('option');
+    opsi.value = d.deviceId;
+    // Label kosong berarti izin kamera belum pernah diberikan di peramban ini.
+    opsi.textContent = d.label || `Kamera ${i + 1}`;
+    pilih.append(opsi);
+  });
+
+  pilih.value = daftar.some((d) => d.deviceId === tersimpan) ? tersimpan : '';
+
+  /*
+   * Catatan hanya muncul kalau ada yang perlu ditindaklanjuti.
+   *
+   * Panel ini sudah padat. Kalimat yang berbunyi "semuanya baik-baik saja"
+   * memakan dua baris untuk memberi tahu apa yang sudah terlihat sendiri dari
+   * nama kamera di pemilihnya.
+   */
+  if (!daftar.length) {
+    kabar.textContent = 'Tidak ada kamera terdeteksi. Periksa kabel USB webcam, lalu buka panel ini lagi.';
+    kabar.className = 'panel-catatan buruk';
+    kabar.hidden = false;
+  } else if (!daftar[0].label) {
+    kabar.textContent = `${daftar.length} kamera terdeteksi. Nyalakan kamera sekali supaya namanya terbaca.`;
+    kabar.className = 'panel-catatan';
+    kabar.hidden = false;
+  } else {
+    kabar.hidden = true;
+  }
 }
 
 function lepasKamera() {
@@ -271,9 +391,20 @@ async function mulaiPindaiMember() {
   try {
     aliran = await bukaKamera({ audio: false });
   } catch (galat) {
-    pesan.innerHTML = galat.name === 'NotAllowedError'
-      ? 'Izin kamera ditolak.<br>Gunakan tombol <b>Ketik Manual</b>.'
-      : `Kamera gagal dinyalakan (${galat.name}).<br>Gunakan <b>Ketik Manual</b>.`;
+    /*
+     * Pesannya menyebut penyebab yang paling mungkin, bukan hanya nama galatnya.
+     *
+     * "NotReadableError" tidak berarti apa-apa bagi petugas yang berdiri di
+     * depan antrean; "webcam dipakai aplikasi lain" bisa langsung ditindaklanjuti.
+     */
+    const sebab = {
+      NotAllowedError: 'Izin kamera ditolak. Izinkan kamera di peramban.',
+      NotFoundError: 'Kamera tidak ditemukan. Periksa kabel USB webcam.',
+      NotReadableError: 'Kamera sedang dipakai aplikasi lain. Tutup aplikasi itu.',
+      OverconstrainedError: 'Kamera pilihan tidak ada lagi. Pilih ulang di panel petugas.',
+    }[galat.name] || `Kamera gagal dinyalakan (${galat.name}).`;
+
+    pesan.innerHTML = `${sebab}<br>Sementara ini gunakan <b>Ketik Manual</b>.`;
     return;
   }
 
@@ -1154,6 +1285,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  const pilihKamera = $('#pilih-kamera');
+  if (pilihKamera) {
+    pilihKamera.addEventListener('change', () => {
+      simpanKamera(pilihKamera.value);
+
+      /*
+       * Aliran yang sedang jalan dilepas, bukan dibiarkan.
+       *
+       * bukaKamera memakai ulang aliran yang masih hidup, jadi tanpa ini kamera
+       * lama tetap terpakai sampai kiosk kebetulan melepasnya sendiri — dan
+       * petugas menyimpulkan pemilihnya tidak berfungsi.
+       */
+      lepasKamera();
+      segarkanDaftarKamera();
+
+      // Layar pindai dihidupkan ulang supaya pergantiannya langsung terlihat.
+      if (keadaan.layar === 'member') mulaiPindaiMember();
+    });
+  }
+
+  /*
+   * Webcam USB dicabut atau dicolok saat kiosk hidup.
+   *
+   * Daftar di panel ikut berubah, dan kalau yang tercabut adalah kamera yang
+   * sedang dipakai, pilihannya dilupakan supaya percobaan berikutnya jatuh ke
+   * kamera yang masih ada alih-alih gagal berulang-ulang.
+   */
+  navigator.mediaDevices?.addEventListener?.('devicechange', async () => {
+    const tersimpan = kameraTersimpan();
+    if (tersimpan) {
+      try {
+        const ada = (await navigator.mediaDevices.enumerateDevices())
+          .some((d) => d.kind === 'videoinput' && d.deviceId === tersimpan);
+        if (!ada) {
+          console.warn('[kamera] perangkat pilihan dicabut; kembali ke otomatis');
+          simpanKamera('');
+        }
+      } catch { /* daftar tidak terbaca; biarkan bukaKamera yang menanganinya */ }
+    }
+    if (!$('#tirai').hidden) segarkanDaftarKamera();
+  });
+
   // Panel petugas: tiga ketukan pada lampu status dalam dua detik. Gerakan ini
   // tidak mungkin terpicu tanpa sengaja oleh tamu, dan tidak menuntut papan
   // ketik fisik yang memang tidak ada di kiosk.
@@ -1164,6 +1337,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (keadaan.ketukLampu >= 3) {
       keadaan.ketukLampu = 0;
       segarkanStatus();
+      segarkanDaftarKamera();
       $('#tirai').hidden = false;
     }
   });

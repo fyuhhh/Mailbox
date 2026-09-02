@@ -240,6 +240,16 @@
     <h3 class="panel-subjudul">Pengaturan Waktu</h3>
     <div class="setelan" id="setelan"></div>
 
+    <!-- Kamera diperlakukan sebagai satu baris pengaturan, bukan bagian
+         tersendiri: panel harus tetap selesai dalam satu layar. -->
+    <div class="setelan-baris baris-kamera">
+      <div class="setelan-label">Kamera<small>pindai QR &amp; rekam</small></div>
+      <select class="panel-pilih" id="pilih-kamera">
+        <option value="">Otomatis</option>
+      </select>
+    </div>
+    <p class="panel-catatan" id="kabar-kamera" hidden></p>
+
     <h3 class="panel-subjudul">Halaman Petugas</h3>
     <div class="panel-tautan">
       <a href="/scan.html">Check-in Tamu</a>
