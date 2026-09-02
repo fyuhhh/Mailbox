@@ -33,45 +33,46 @@ paling buruk.
 
 ### 2. Jalankan
 
-Klik dua kali **`Jalankan Kiosk.bat`**.
+Klik dua kali **`Jalankan Kiosk.bat`**. Tidak ada yang perlu disesuaikan.
 
-Pada jalan pertama ia akan:
+Yang diurus sendiri oleh kiosk, tanpa ditanyakan:
 
-- mencari Node.js; kalau belum ada, mengunduhnya sendiri ke folder itu
-- menanyakan `SYNC_SECRET`, `SANDI_PETUGAS`, dan alamat printer — **sekali saja**
-- menulis `kiosk/.env`
-- menyalakan kiosk dan membuka peramban di `http://localhost:4000`
-
-Nilai yang harus diisi (minta ke pemilik proyek, **jangan ditebak**):
-
-| Isian | Keterangan |
+| | |
 |---|---|
-| `SYNC_SECRET` | Kunci ke server undangan. Harus **sama persis** dengan yang di VPS. Salah sedikit → HTTP 401, member tidak masuk. |
-| `SANDI_PETUGAS` | Untuk membuka halaman Persiapan Acara & Data Kiosk. |
-| Alamat printer | IP printer termal di jaringan, mis. `192.168.1.102`. Kosongkan kalau printer lewat USB. |
+| Node.js | diunduh sendiri ke folder itu bila belum ada |
+| Alamat server, ukuran kertas, nama acara | sudah benar di `kiosk/.env.default` yang ikut repo |
+| Printer | dicari sendiri di jaringan, dipakai, lalu diingat |
+| Daftar member | ditarik sendiri dari server, diperbarui tiap 2 menit |
+| Kode voucher | dimuat sendiri dari `kiosk/benih/kode-voucher.txt` |
 
-### 3. Periksa `kiosk/.env` — INI YANG PALING SERING SALAH
+### 3. Isi dua nilai rahasia — sekali seumur PC ini
 
-Pastikan baris ini ada dan **persis** begini:
+Peramban akan terbuka di halaman **Penyiapan Kiosk**. Isi dua kotak:
 
-```
-BASE_URL=https://undangan.opsjobs.id
-```
+| Isian | Dari mana |
+|---|---|
+| `SYNC_SECRET` | minta ke pemilik proyek — harus sama persis dengan yang di server |
+| `SANDI_PETUGAS` | bebas ditentukan, untuk membuka halaman Persiapan Acara & Data Kiosk |
 
-Kalau `BASE_URL` kosong, kiosk **menolak menyala** dan menyebutkan sebabnya.
+Tekan **Simpan & mulai**. Halaman itu tidak akan muncul lagi.
 
-Kalau `BASE_URL=AUTO` atau berisi alamat `192.168.x.x` / `10.x.x.x` / `localhost`,
-kiosk **tetap menyala tetapi salah total**, dan dua hal rusak sekaligus:
+Jangan mengetik nilai ini di jendela hitam — tanda seru dan tanda `&` adalah
+karakter khusus di cmd.exe dan bisa terpotong diam-diam. Formulir peramban tidak
+punya masalah itu.
 
-1. daftar member ditarik dari server lokal, bukan VPS — isinya data dummy
-2. **QR di struk ikut menunjuk ke alamat lokal itu**, dan ponsel tamu tidak akan
-   pernah bisa membukanya
+### 4. Buktikan perangkatnya — halaman Perangkat
 
-Yang kedua jauh lebih parah dan baru ketahuan setelah tamu pergi membawa struk.
-Kiosk akan menampilkan blok peringatan besar di jendela hitam kalau ini terjadi.
-Jangan diabaikan.
+Ketuk titik status **tiga kali** → **Perangkat**. Satu layar, tiga bagian:
 
----
+- **Kamera** — pilih webcam eksternal, lihat pratinjaunya
+- **Mikrofon** — pilih mikrofon webcam, **bicara dan pastikan meternya bergerak**,
+  lalu tekan "Rekam 4 detik & putar". Halaman itu memeriksa isi berkasnya dan
+  akan bilang **bisu** kalau tidak ada jalur suara.
+- **Printer** — tekan "Cetak struk uji" dan pastikan kertasnya benar-benar keluar
+
+Mikrofon adalah yang paling sering salah: peramban memakai **perangkat rekam
+bawaan Windows**, bukan yang dipilih di aplikasi Camera. Kalau bawaannya bukan
+mikrofon webcam, rekaman jadi bisu tanpa peringatan apa pun.
 
 ## Cara memastikan berhasil
 
@@ -140,7 +141,7 @@ server lokal yang kosong — persis masalah `BASE_URL` di atas.
 
 ## Sebelum acara — daftar periksa
 
-- [ ] `BASE_URL=https://undangan.opsjobs.id` di `kiosk/.env`
+- [ ] Halaman Perangkat: kamera **menyala**, mikrofon **suara terekam**, printer **siap**
 - [ ] Panel Data Kiosk hijau, sumber `HTTPS://UNDANGAN.OPSJOBS.ID`
 - [ ] Member 16.054 (atau lebih, kalau pihak ketiga kirim lagi)
 - [ ] **Kode produksi sudah menggantikan 20 kode uji**
@@ -160,9 +161,10 @@ server lokal yang kosong — persis masalah `BASE_URL` di atas.
 Dikembangkan di macOS. Yang belum terbukti dan harus dicoba **jauh sebelum
 hari-H**, bukan di hari-H:
 
-1. `Jalankan Kiosk.bat` — pengunduhan Node.js otomatis dan isian `.env`
+1. `Jalankan Kiosk.bat` — pengunduhan Node.js otomatis dan mode kiosk Chrome
 2. Pencetakan ke printer termal dari Windows
-3. Kamera di peramban Windows dalam mode kiosk
+3. Penyapuan jaringan menembus Windows Firewall
+4. Kamera dan mikrofon webcam eksternal di Chrome Windows
 
 Kalau ada yang gagal, laporkan pesan galatnya apa adanya. Jangan menambal dengan
 menebak.
