@@ -102,6 +102,30 @@ export class Printer {
   }
 
   /**
+   * Arahkan ke printer lain tanpa menyalakan ulang kiosk.
+   *
+   * Sambungan tetap ke printer lama WAJIB diputus lebih dulu. Tanpa itu, soket
+   * lama tetap tersimpan di this._soket dan struk berikutnya dikirim ke alamat
+   * yang baru saja ditinggalkan — kiosk melaporkan berhasil, kertas keluar di
+   * printer yang salah, dan tidak ada galat di mana pun.
+   */
+  arahkanKe({ host = null, port = 9100, nama = null }) {
+    const sama = this.host === (host || null) && this.nama === (nama ?? this.nama);
+    if (sama && this.host) return false;
+
+    this.putusPrinter();
+    this.host = host || null;
+    this.port = Number(port) || 9100;
+    if (nama) this.nama = nama;
+    this.galatTerakhir = null;
+    // Singgahan kegagalan printer LAMA harus ikut dibuang; kalau tidak, printer
+    // baru dilaporkan mati selama empat detik pertama tanpa pernah dicoba.
+    this._gagalSampai = 0;
+    this._gagalPesan = null;
+    return true;
+  }
+
+  /**
    * Tulis satu struk ke sambungan tetap.
    *
    * Sambungan sengaja TIDAK ditutup sesudahnya. Printer tidak pernah membalas

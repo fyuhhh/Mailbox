@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perangkat</title>
+<link rel="stylesheet" href="gaya.css">
+<link rel="stylesheet" href="scan.css">
+<style>
+/* Halaman ini melebar; gaya.css memusatkan body untuk kiosk 9:16. */
+.badan-scan { display: block; place-content: initial; height: auto; }
+.panggung-scan { max-width: min(56rem, 100%); }
+.panggung-scan > * { min-width: 0; }
+
+.kartu {
+  padding: 1.1rem 1.2rem 1.3rem;
+  border: 1px solid var(--garis);
+  border-radius: .9rem;
+  background: rgba(255, 255, 255, .78);
+}
+
+.kartu h2 {
+  display: flex; align-items: center; gap: .6rem;
+  margin: 0 0 .2rem; font-size: 1.05rem;
+}
+
+.lencana {
+  padding: .1rem .55rem; border-radius: 99rem;
+  font-size: .7rem; font-weight: 800; letter-spacing: .04em;
+}
+.lencana.baik  { background: rgba(47,125,81,.15);  color: var(--aman); }
+.lencana.buruk { background: rgba(194,56,75,.15);  color: var(--bahaya); }
+.lencana.nanti { background: rgba(107,78,143,.14); color: var(--ungu); }
+
+.kartu p.jelas { margin: 0 0 .9rem; font-size: .86rem; color: var(--tinta-redup); }
+
+select, .tombol-alat {
+  height: 2.8rem; padding: 0 .9rem;
+  border: 1px solid var(--garis); border-radius: .7rem;
+  background: #fff; color: var(--tinta);
+  font: inherit; font-size: .92rem; font-weight: 600;
+}
+select { width: 100%; max-width: 100%; }
+.tombol-alat { background: rgba(255,255,255,.9); }
+.tombol-alat.utama { background: var(--emas); border-color: transparent; color: #1a1405; font-weight: 800; }
+.tombol-alat:disabled { opacity: .45; }
+
+.deret { display: flex; flex-wrap: wrap; gap: .55rem; margin-top: .7rem; align-items: center; }
+
+video.pratinjau {
+  width: 100%; max-height: 15rem; margin-top: .7rem;
+  border-radius: .7rem; background: #14101d; object-fit: contain;
+  transform: scaleX(-1);
+}
+
+/* Meter suara: satu-satunya cara membuktikan mikrofon benar-benar menangkap
+   bunyi, bukan sekadar terpilih. */
+.meter {
+  position: relative; height: 1.5rem; margin-top: .7rem;
+  border: 1px solid var(--garis); border-radius: .5rem;
+  background: #efeaf7; overflow: hidden;
+}
+.meter i {
+  position: absolute; inset: 0 100% 0 0;
+  background: linear-gradient(90deg, var(--aman), #d8b23a 70%, var(--bahaya));
+  transition: right .06s linear;
+}
+.meter span {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-size: .72rem; font-weight: 700; color: var(--ungu-tua);
+}
+
+.daftar-printer { display: grid; gap: .45rem; margin-top: .7rem; }
+
+.baris-printer {
+  display: flex; align-items: center; justify-content: space-between; gap: .8rem;
+  padding: .6rem .8rem;
+  border: 1px solid var(--garis); border-radius: .7rem;
+  background: rgba(255,255,255,.9); font-size: .9rem;
+}
+.baris-printer.aktif { border-color: var(--emas); box-shadow: 0 0 0 .12rem rgba(216,178,58,.35); }
+.baris-printer b { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+.baris-printer small { display: block; color: var(--tinta-redup); font-size: .74rem; }
+
+.pesan { margin-top: .7rem; font-size: .86rem; }
+.pesan.buruk { color: var(--bahaya); font-weight: 600; }
+.pesan.baik { color: var(--aman); font-weight: 600; }
+</style>
+</head>
+<body class="badan-scan">
+
+<header class="kepala">
+  <div>
+    <h1 class="kepala-judul">Perangkat</h1>
+    <p class="kepala-sub">kamera, mikrofon, dan printer &mdash; buktikan sebelum acara</p>
+  </div>
+  <a class="tombol-kecil" href="/">&larr; Kiosk</a>
+</header>
+
+<main class="panggung-scan">
+
+  <!-- ============================== KAMERA ============================== -->
+  <section class="kartu">
+    <h2>Kamera <span class="lencana nanti" id="lencana-kamera">memeriksa</span></h2>
+    <p class="jelas">Dipakai untuk memindai QR member dan merekam video ucapan.</p>
+    <select id="pilih-kamera"><option value="">Otomatis</option></select>
+    <video class="pratinjau" id="pratinjau" playsinline muted></video>
+    <p class="pesan" id="pesan-kamera"></p>
+  </section>
+
+  <!-- ============================= MIKROFON ============================= -->
+  <section class="kartu">
+    <h2>Mikrofon <span class="lencana nanti" id="lencana-mik">memeriksa</span></h2>
+    <p class="jelas">
+      Peramban memakai <b>perangkat bawaan Windows</b>, bukan yang dipilih di aplikasi
+      Camera. Kalau bawaannya bukan mikrofon webcam, rekaman jadi bisu tanpa peringatan.
+      Pilih mikrofon webcam di sini, lalu bicara &mdash; batang di bawah harus bergerak.
+    </p>
+    <select id="pilih-mik"><option value="">Otomatis</option></select>
+    <div class="meter"><i id="meter-isi"></i><span id="meter-teks">menunggu suara&hellip;</span></div>
+    <div class="deret">
+      <button type="button" class="tombol-alat" id="rekam-uji">Rekam 4 detik &amp; putar</button>
+      <audio id="putar-uji" controls hidden style="max-width:100%"></audio>
+    </div>
+    <p class="pesan" id="pesan-mik"></p>
+  </section>
+
+  <!-- ============================== PRINTER ============================= -->
+  <section class="kartu">
+    <h2>Printer <span class="lencana nanti" id="lencana-printer">memeriksa</span></h2>
+    <p class="jelas">
+      Kiosk mencari printer sendiri di jaringan dan memakainya tanpa diatur. Daftar di
+      bawah hanya diperlukan bila ada lebih dari satu, atau bila yang terpilih keliru.
+    </p>
+    <div class="deret">
+      <button type="button" class="tombol-alat" id="cari-printer">Cari printer di jaringan</button>
+      <button type="button" class="tombol-alat utama" id="uji-printer">Cetak struk uji</button>
+    </div>
+    <div class="daftar-printer" id="daftar-printer"></div>
+    <p class="pesan" id="pesan-printer"></p>
+  </section>
+
+</main>
+
+<script>
+'use strict';
+
+var $ = function (s) { return document.querySelector(s); };
+
+function lencana(id, keadaan, teks) {
+  var el = $(id);
+  el.className = 'lencana ' + keadaan;
+  el.textContent = teks;
+}
+
+function ambil(kunci) {
+  try { return localStorage.getItem(kunci) || ''; } catch (e) { return ''; }
+}
+function simpan(kunci, nilai) {
+  try { nilai ? localStorage.setItem(kunci, nilai) : localStorage.removeItem(kunci); } catch (e) {}
+}
+
+/* ================================ KAMERA ================================= */
+
+var aliran = null;
+
+function syaratVideo(id) {
+  var dasar = { width: { ideal: 1280 }, height: { ideal: 720 } };
+  if (id) dasar.deviceId = { exact: id };
+  return dasar;
+}
+
+function syaratAudio(id) {
+  /*
+   * Pemrosesan suara dimatikan untuk ucapan di ruang terbuka.
+   *
+   * echoCancellation dan noiseSuppression dirancang untuk panggilan suara: di
+   * atrium yang ramai keduanya menafsirkan suara sekitar sebagai derau dan bisa
+   * menekan suara tamu sampai nyaris hilang. Yang direkam di sini adalah ucapan
+   * selamat, bukan rapat.
+   */
+  var dasar = { echoCancellation: false, noiseSuppression: false, autoGainControl: true };
+  if (id) dasar.deviceId = { exact: id };
+  return dasar;
+}
+
+async function nyalakan() {
+  if (aliran) { aliran.getTracks().forEach(function (t) { t.stop(); }); aliran = null; }
+
+  try {
+    aliran = await navigator.mediaDevices.getUserMedia({
+      video: syaratVideo(ambil('kameraPilihan')),
+      audio: syaratAudio(ambil('mikPilihan')),
+    });
+  } catch (e) {
+    // Pilihan yang tersimpan bisa menunjuk perangkat yang sudah dicabut.
+    // Dicoba sekali lagi tanpa pilihan, supaya halaman ini tetap berguna.
+    simpan('kameraPilihan', ''); simpan('mikPilihan', '');
+    try {
+      aliran = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      $('#pesan-kamera').textContent = 'Perangkat pilihan tidak ada lagi; kembali ke otomatis.';
+      $('#pesan-kamera').className = 'pesan buruk';
+    } catch (e2) {
+      lencana('#lencana-kamera', 'buruk', 'gagal');
+      lencana('#lencana-mik', 'buruk', 'gagal');
+      $('#pesan-kamera').textContent = jelaskan(e2);
+      $('#pesan-kamera').className = 'pesan buruk';
+      return;
+    }
+  }
+
+  var v = aliran.getVideoTracks(), a = aliran.getAudioTracks();
+
+  $('#pratinjau').srcObject = aliran;
+  $('#pratinjau').play().catch(function () {});
+
+  lencana('#lencana-kamera', v.length ? 'baik' : 'buruk', v.length ? 'menyala' : 'tidak ada');
+  if (v.length) {
+    $('#pesan-kamera').textContent = 'Terpakai: ' + (v[0].label || 'kamera tanpa nama');
+    $('#pesan-kamera').className = 'pesan';
+  }
+
+  if (!a.length) {
+    lencana('#lencana-mik', 'buruk', 'tidak ada');
+    $('#pesan-mik').textContent = 'Tidak ada mikrofon di aliran ini. Rekaman akan bisu.';
+    $('#pesan-mik').className = 'pesan buruk';
+  } else {
+    lencana('#lencana-mik', 'nanti', 'bicaralah');
+    $('#pesan-mik').textContent = 'Terpakai: ' + (a[0].label || 'mikrofon tanpa nama');
+    $('#pesan-mik').className = 'pesan';
+    pasangMeter(aliran);
+  }
+
+  await isiDaftar();
+}
+
+function jelaskan(e) {
+  var peta = {
+    NotAllowedError: 'Izin kamera/mikrofon ditolak. Izinkan di peramban, lalu muat ulang halaman ini.',
+    NotFoundError: 'Kamera atau mikrofon tidak ditemukan. Periksa kabel USB webcam.',
+    NotReadableError: 'Perangkat sedang dipakai aplikasi lain. Tutup aplikasi itu lalu muat ulang.',
+    OverconstrainedError: 'Perangkat yang diminta tidak tersedia.',
+  };
+  return peta[e.name] || ('Gagal: ' + e.name + ' — ' + e.message);
+}
+
+async function isiDaftar() {
+  var daftar = await navigator.mediaDevices.enumerateDevices();
+
+  isi('#pilih-kamera', daftar.filter(function (d) { return d.kind === 'videoinput'; }), 'kameraPilihan', 'Kamera');
+  isi('#pilih-mik', daftar.filter(function (d) { return d.kind === 'audioinput'; }), 'mikPilihan', 'Mikrofon');
+}
+
+function isi(sel, daftar, kunci, label) {
+  var el = $(sel), tersimpan = ambil(kunci);
+  el.innerHTML = '<option value="">Otomatis (bawaan sistem)</option>';
+  daftar.forEach(function (d, i) {
+    var o = document.createElement('option');
+    o.value = d.deviceId;
+    o.textContent = d.label || (label + ' ' + (i + 1));
+    el.append(o);
+  });
+  el.value = daftar.some(function (d) { return d.deviceId === tersimpan; }) ? tersimpan : '';
+}
+
+$('#pilih-kamera').addEventListener('change', function () { simpan('kameraPilihan', this.value); nyalakan(); });
+$('#pilih-mik').addEventListener('change', function () { simpan('mikPilihan', this.value); nyalakan(); });
+
+/* =========================== METER SUARA ================================= */
+
+var konteksAudio = null, gambarMeter = null;
+
+function pasangMeter(s) {
+  cancelAnimationFrame(gambarMeter);
+  try {
+    konteksAudio = konteksAudio || new (window.AudioContext || window.webkitAudioContext)();
+    if (konteksAudio.state === 'suspended') konteksAudio.resume();
+  } catch (e) { return; }
+
+  var sumber = konteksAudio.createMediaStreamSource(s);
+  var analisa = konteksAudio.createAnalyser();
+  analisa.fftSize = 1024;
+  sumber.connect(analisa);
+
+  var data = new Uint8Array(analisa.fftSize);
+  var puncak = 0;
+
+  function putar() {
+    analisa.getByteTimeDomainData(data);
+
+    // RMS, bukan puncak sesaat: puncak melonjak karena satu letupan dan membuat
+    // meter terlihat hidup walau tidak ada suara yang benar-benar tertangkap.
+    var jumlah = 0;
+    for (var i = 0; i < data.length; i++) { var v = (data[i] - 128) / 128; jumlah += v * v; }
+    var rms = Math.sqrt(jumlah / data.length);
+    var persen = Math.min(100, Math.round(rms * 300));
+
+    $('#meter-isi').style.right = (100 - persen) + '%';
+    if (persen > puncak) puncak = persen;
+
+    $('#meter-teks').textContent = puncak < 3
+      ? 'menunggu suara…'
+      : 'suara tertangkap (puncak ' + puncak + '%)';
+
+    if (puncak >= 3) lencana('#lencana-mik', 'baik', 'suara masuk');
+
+    gambarMeter = requestAnimationFrame(putar);
+  }
+  putar();
+}
+
+/* ========================== REKAM PERCOBAAN ============================== */
+
+function tipeRekaman() {
+  var pilihan = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'];
+  for (var i = 0; i < pilihan.length; i++) {
+    if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(pilihan[i])) return pilihan[i];
+  }
+  return '';
+}
+
+$('#rekam-uji').addEventListener('click', function () {
+  if (!aliran || !aliran.getAudioTracks().length) {
+    $('#pesan-mik').textContent = 'Tidak ada mikrofon untuk diuji.';
+    $('#pesan-mik').className = 'pesan buruk';
+    return;
+  }
+
+  var b = this;
+  b.disabled = true;
+  var potong = [];
+  var mt = tipeRekaman();
+  var r = new MediaRecorder(aliran, mt ? { mimeType: mt } : undefined);
+
+  r.ondataavailable = function (e) { if (e.data && e.data.size) potong.push(e.data); };
+
+  r.onstop = async function () {
+    var blob = new Blob(potong, { type: r.mimeType });
+
+    /*
+     * Berkasnya diperiksa, bukan hanya diputar.
+     *
+     * Petugas yang menonton di ruang ramai belum tentu sadar rekamannya bisu.
+     * Penanda codec di dalam berkas membuktikannya tanpa bergantung pada
+     * telinga siapa pun.
+     */
+    var awal = new Uint8Array(await blob.slice(0, 8192).arrayBuffer());
+    var teks = '';
+    for (var i = 0; i < awal.length; i++) teks += String.fromCharCode(awal[i]);
+    var adaOpus = teks.indexOf('A_OPUS') !== -1 || (r.mimeType || '').indexOf('mp4') !== -1;
+
+    var putar = $('#putar-uji');
+    putar.src = URL.createObjectURL(blob);
+    putar.hidden = false;
+
+    if (adaOpus) {
+      lencana('#lencana-mik', 'baik', 'suara terekam');
+      $('#pesan-mik').textContent = 'Berkas berisi jalur suara (' + Math.round(blob.size / 1024) + ' KB). Putar untuk mendengarkan.';
+      $('#pesan-mik').className = 'pesan baik';
+    } else {
+      lencana('#lencana-mik', 'buruk', 'bisu');
+      $('#pesan-mik').textContent = 'Berkas TIDAK berisi jalur suara. Pilih mikrofon lain di atas.';
+      $('#pesan-mik').className = 'pesan buruk';
+    }
+    b.disabled = false;
+    b.textContent = 'Rekam 4 detik & putar';
+  };
+
+  r.start();
+  var sisa = 4;
+  b.textContent = 'Merekam… ' + sisa;
+  var jam = setInterval(function () {
+    sisa -= 1;
+    b.textContent = 'Merekam… ' + sisa;
+    if (sisa <= 0) { clearInterval(jam); r.stop(); }
+  }, 1000);
+});
+
+/* =============================== PRINTER ================================= */
+
+function gambarPrinter(d) {
+  var kotak = $('#daftar-printer');
+  kotak.innerHTML = '';
+
+  var siap = d.status && d.status.siap;
+  lencana('#lencana-printer', siap ? 'baik' : 'buruk', siap ? 'siap' : 'tidak menjawab');
+
+  var pakai = d.dipakai || {};
+  $('#pesan-printer').textContent =
+    (pakai.host ? 'Terpakai: ' + pakai.host + ':' + pakai.port : 'Terpakai: ' + (pakai.nama || '—')) +
+    (d.sumberPilihan ? ' (' + d.sumberPilihan + ')' : '') +
+    (siap ? '' : ' — ' + ((d.status && d.status.keterangan) || 'tidak menjawab'));
+  $('#pesan-printer').className = 'pesan' + (siap ? '' : ' buruk');
+
+  (d.ditemukan || []).forEach(function (p) {
+    kotak.append(baris(
+      p.host, p.port,
+      p.host + ':' + p.port,
+      p.menjawabEscPos ? 'menjawab sebagai printer ESC/POS' : 'porta terbuka, tetapi tidak menjawab sebagai printer',
+      pakai.host === p.host,
+      null,
+    ));
+  });
+
+  (d.sistem || []).forEach(function (p) {
+    kotak.append(baris(
+      null, null, p.nama,
+      'printer terpasang di sistem' + (p.dibagikan ? ' (dibagikan sebagai ' + p.namaBagi + ')' : ''),
+      !pakai.host && pakai.nama === p.nama,
+      p.nama,
+    ));
+  });
+
+  if (!kotak.children.length) {
+    kotak.innerHTML = '<div class="baris-printer"><span>Belum ada printer ditemukan. ' +
+      'Colok printer ke jaringan yang sama, lalu tekan “Cari printer”.</span></div>';
+  }
+}
+
+function baris(host, port, judul, ket, aktif, nama) {
+  var el = document.createElement('div');
+  el.className = 'baris-printer' + (aktif ? ' aktif' : '');
+  el.innerHTML = '<span><b></b><small></small></span>';
+  el.querySelector('b').textContent = judul;
+  el.querySelector('small').textContent = ket;
+
+  if (!aktif) {
+    var t = document.createElement('button');
+    t.type = 'button';
+    t.className = 'tombol-alat';
+    t.textContent = 'Pakai ini';
+    t.addEventListener('click', function () {
+      t.disabled = true;
+      fetch('/api/printer/pilih', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(host ? { host: host, port: port } : { nama: nama }),
+      }).then(function (r) { return r.json(); }).then(muatPrinter)
+        .catch(function () { t.disabled = false; });
+    });
+    el.append(t);
+  }
+  return el;
+}
+
+function muatPrinter(d) {
+  if (d && d.dipakai) return gambarPrinter(d);
+  return fetch('/api/printer').then(function (r) { return r.json(); }).then(gambarPrinter);
+}
+
+$('#cari-printer').addEventListener('click', function () {
+  var b = this;
+  b.disabled = true;
+  b.textContent = 'Menyapu jaringan…';
+  $('#pesan-printer').textContent = 'Menyapu semua alamat di jaringan ini, sekitar 5 detik…';
+  $('#pesan-printer').className = 'pesan';
+
+  fetch('/api/printer/cari', { method: 'POST' })
+    .then(function (r) { return r.json(); })
+    .then(function (d) { gambarPrinter(d); if (d.alasan) $('#pesan-printer').textContent = d.alasan; })
+    .catch(function () { $('#pesan-printer').textContent = 'Kiosk tidak merespons.'; })
+    .finally(function () { b.disabled = false; b.textContent = 'Cari printer di jaringan'; });
+});
+
+$('#uji-printer').addEventListener('click', function () {
+  var b = this;
+  b.disabled = true;
+  b.textContent = 'Mencetak…';
+  fetch('/api/printer/uji', { method: 'POST' })
+    .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+    .then(function (h) {
+      $('#pesan-printer').textContent = h.ok
+        ? 'Struk uji terkirim. Periksa apakah kertasnya benar-benar keluar.'
+        : 'Gagal mencetak: ' + (h.d.galat || 'tidak diketahui');
+      $('#pesan-printer').className = 'pesan ' + (h.ok ? 'baik' : 'buruk');
+    })
+    .catch(function () { $('#pesan-printer').textContent = 'Kiosk tidak merespons.'; })
+    .finally(function () { b.disabled = false; b.textContent = 'Cetak struk uji'; muatPrinter(); });
+});
+
+/* ================================ MULAI ================================== */
+
+navigator.mediaDevices.addEventListener('devicechange', function () { isiDaftar(); });
+nyalakan();
+muatPrinter();
+setInterval(muatPrinter, 10000);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Penyiapan Kiosk</title>
+<link rel="stylesheet" href="gaya.css">
+<link rel="stylesheet" href="scan.css">
+<style>
+.badan-scan { display: block; place-content: initial; height: auto; }
+.panggung-scan { max-width: min(34rem, 100%); }
+
+.kartu {
+  padding: 1.4rem 1.4rem 1.6rem;
+  border: 1px solid var(--garis); border-radius: .9rem;
+  background: rgba(255,255,255,.82);
+}
+
+.kartu h2 { margin: 0 0 .3rem; font-size: 1.1rem; }
+.kartu p.jelas { margin: 0 0 1.3rem; font-size: .88rem; line-height: 1.5; color: var(--tinta-redup); }
+
+label { display: block; margin-bottom: 1.1rem; }
+label b { display: block; margin-bottom: .2rem; font-size: .92rem; }
+label small { display: block; margin-bottom: .45rem; font-size: .78rem; color: var(--tinta-redup); line-height: 1.45; }
+
+input {
+  width: 100%; height: 3rem; padding: 0 .9rem;
+  border: 1px solid var(--garis); border-radius: .7rem;
+  background: #fff; color: var(--tinta); font: inherit; font-size: 1rem;
+}
+input:focus { outline: 2px solid var(--emas); outline-offset: 1px; }
+
+button {
+  width: 100%; height: 3.1rem; border: 0; border-radius: .7rem;
+  background: var(--emas); color: #1a1405; font: inherit; font-size: 1rem; font-weight: 800;
+}
+button:disabled { opacity: .5; }
+
+.pesan { margin: 1rem 0 0; font-size: .9rem; font-weight: 600; }
+.pesan.buruk { color: var(--bahaya); }
+.pesan.baik  { color: var(--aman); }
+
+.beres { text-align: center; padding: 2rem 1rem; }
+.beres h2 { font-size: 1.2rem; margin: 0 0 .5rem; }
+.beres a {
+  display: inline-block; margin-top: 1.2rem; padding: .8rem 1.6rem;
+  border-radius: .7rem; background: var(--emas); color: #1a1405;
+  font-weight: 800; text-decoration: none;
+}
+</style>
+</head>
+<body class="badan-scan">
+
+<header class="kepala">
+  <div>
+    <h1 class="kepala-judul">Penyiapan Kiosk</h1>
+    <p class="kepala-sub">sekali seumur PC ini</p>
+  </div>
+</header>
+
+<main class="panggung-scan">
+  <section class="kartu" id="kartu">
+    <h2>Tinggal dua isian</h2>
+    <p class="jelas">
+      Semua setelan lain &mdash; alamat server, ukuran kertas, nama acara &mdash; sudah
+      terisi benar dan tidak perlu disentuh. Printer dicari sendiri di jaringan.
+      Daftar member ditarik sendiri. Yang tersisa hanya dua nilai rahasia, dan
+      keduanya tidak pernah ikut tersimpan di penyimpanan kode.
+    </p>
+
+    <form id="borang">
+      <label id="baris-secret">
+        <b>SYNC_SECRET</b>
+        <small>Kunci ke server undangan. Menentukan apakah daftar member bisa ditarik
+        dan struk terkirim. Harus sama persis dengan yang ada di server.</small>
+        <input type="text" id="secret" autocomplete="off" spellcheck="false" placeholder="tempel di sini">
+      </label>
+
+      <label id="baris-sandi">
+        <b>SANDI_PETUGAS</b>
+        <small>Untuk membuka halaman Persiapan Acara dan Data Kiosk. Bebas ditentukan
+        sendiri; tanda baca apa pun boleh.</small>
+        <input type="text" id="sandi" autocomplete="off" spellcheck="false" placeholder="tempel di sini">
+      </label>
+
+      <button type="submit">Simpan &amp; mulai</button>
+      <p class="pesan" id="pesan" hidden></p>
+    </form>
+  </section>
+</main>
+
+<script>
+'use strict';
+
+var $ = function (s) { return document.querySelector(s); };
+
+function beres() {
+  $('#kartu').innerHTML =
+    '<div class="beres"><h2>Kiosk siap</h2>' +
+    '<p class="jelas">Tersimpan di PC ini. Halaman ini tidak akan muncul lagi.</p>' +
+    '<a href="/">Buka kiosk</a></div>';
+}
+
+fetch('/api/siapkan')
+  .then(function (r) { return r.json(); })
+  .then(function (d) {
+    if (d.selesai) return beres();
+    // Yang sudah terisi disembunyikan: menampilkannya mengundang orang mengganti
+    // nilai yang sudah benar, dan server memang menolak menimpanya.
+    if (!d.perlu.syncSecret) $('#baris-secret').hidden = true;
+    if (!d.perlu.sandiPetugas) $('#baris-sandi').hidden = true;
+  })
+  .catch(function () {});
+
+$('#borang').addEventListener('submit', function (ev) {
+  ev.preventDefault();
+  var tombol = this.querySelector('button');
+  var pesan = $('#pesan');
+
+  tombol.disabled = true;
+  pesan.hidden = true;
+
+  fetch('/api/siapkan', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ syncSecret: $('#secret').value, sandiPetugas: $('#sandi').value }),
+  })
+    .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+    .then(function (h) {
+      if (!h.ok) throw new Error(h.d.galat || 'Gagal menyimpan.');
+      beres();
+    })
+    .catch(function (e) {
+      pesan.textContent = e.message;
+      pesan.className = 'pesan buruk';
+      pesan.hidden = false;
+    })
+    .finally(function () { tombol.disabled = false; });
+});
+</script>
+
+</body>
+</html>

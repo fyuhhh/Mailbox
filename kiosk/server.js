@@ -19,13 +19,36 @@ import { bukaMember } from './src/member.js';
 import { bukaPromo, bacaBerkasKode } from './src/promo.js';
 import { bukaBasis } from './src/basis.js';
 import { tanamBenih } from './src/benih.js';
+import { bukaPrinterOtomatis } from './src/printer-otomatis.js';
 import { buatKodeUnik } from './src/kode.js';
 import { Printer } from './src/printer.js';
 import { Sinkronisasi } from './src/sync.js';
 
 const AKAR = path.dirname(fileURLToPath(import.meta.url));
 
-process.loadEnvFile?.(path.join(AKAR, '.env'));
+/*
+ * Nilai bawaan dimuat LEBIH DULU, lalu ditimpa oleh .env milik mesin ini.
+ *
+ * loadEnvFile tidak menimpa variabel yang sudah ada, jadi urutannya menentukan
+ * siapa yang menang: yang dimuat belakangan kalah. Karena itu .env.default —
+ * yang ikut di penyimpanan kode dan berisi setelan bukan-rahasia — dimuat
+ * SESUDAH .env, bukan sebelumnya.
+ *
+ * Buahnya: PC baru yang hanya menarik kode sudah punya BASE_URL, ukuran kertas,
+ * dan nama acara yang benar tanpa siapa pun mengetik apa pun. Yang tersisa
+ * hanya dua isian rahasia, dan itu ditanyakan sekali lewat halaman penyiapan.
+ */
+/*
+ * Keduanya boleh tidak ada.
+ *
+ * loadEnvFile MELEMPAR bila berkasnya tidak ditemukan, dan .env memang belum
+ * ada di PC yang baru saja menarik kode — keadaan yang paling normal, bukan
+ * kesalahan. Tanpa penjaga ini kiosk mati sebelum sempat menampilkan halaman
+ * penyiapan yang justru dibuat untuk keadaan itu.
+ */
+for (const berkas of ['.env', '.env.default']) {
+  try { process.loadEnvFile?.(path.join(AKAR, berkas)); } catch { /* belum ada */ }
+}
 
 /**
  * Alamat LAN mesin ini, untuk BASE_URL=AUTO.
@@ -183,6 +206,22 @@ const printer = new Printer({
   folderDryRun: path.join(AKAR, 'data', 'struk-uji'),
 });
 
+/*
+ * Pengarah printer otomatis.
+ *
+ * PRINTER_HOST di .env diperlakukan sebagai petunjuk, bukan kebenaran. Kiosk
+ * berpindah antar-PC dan antar-jaringan; alamat yang ditulis waktu penyiapan
+ * hampir pasti salah begitu berpindah, dan gejalanya — "printer tidak konek" —
+ * tidak menunjuk ke sebabnya sama sekali.
+ */
+const printerOtomatis = bukaPrinterOtomatis({
+  printer,
+  berkas: path.join(AKAR, 'data', 'printer.json'),
+  hostAwal: konf.printerHost,
+  portAwal: konf.printerPort,
+  namaAwal: konf.printerNama,
+});
+
 const sinkron = new Sinkronisasi({
   db,
   baseUrl: konf.baseUrl,
@@ -206,6 +245,20 @@ app.use(express.raw({ type: ['video/webm', 'video/mp4'], limit: `${BATAS_VIDEO_M
  * dan waktu habis mencari bug yang tidak ada. Berkasnya dilayani dari localhost,
  * jadi tidak ada ongkos apa pun untuk selalu mengambil yang terbaru.
  */
+/*
+ * Kiosk dialihkan ke penyiapan selama masih ada yang kosong.
+ *
+ * HARUS berada sebelum express.static. Sesudahnya, "/" sudah dilayani sebagai
+ * index.html dan pengalihan ini tidak pernah dijalankan — tamu melihat layar
+ * sambutan dari kiosk yang belum bisa menarik member maupun mencetak, dan
+ * kegagalannya baru muncul di depan antrean.
+ */
+app.get('/', (req, res, next) => {
+  const perlu = perluDisiapkan();
+  if (!perlu.syncSecret && !perlu.sandiPetugas) return next();
+  res.redirect('/siapkan.html');
+});
+
 app.use(
   express.static(path.join(AKAR, 'public'), {
     etag: false,
@@ -560,7 +613,7 @@ function tautkanVideo(videoId, kode) {
  * Menaruh sandinya di sini sama saja dengan menerbitkannya, dan yang dijaga di
  * balik sandi ini justru daftar kode voucher.
  */
-const SANDI_PETUGAS = process.env.SANDI_PETUGAS || '';
+let SANDI_PETUGAS = process.env.SANDI_PETUGAS || '';
 
 /*
  * Karcis masuk hanya hidup selama server hidup — disimpan di ingatan, bukan di
@@ -641,6 +694,97 @@ function butuhSandi(req, res, next) {
 app.get('/api/promo', (_req, res) => {
   res.json(promo.ringkas());
 });
+
+/* ------------------------------ penyiapan awal ---------------------------- */
+
+/*
+ * Dua rahasia diminta lewat peramban, bukan lewat berkas .bat.
+ *
+ * Sandi petugas mengandung tanda seru, dan tanda seru adalah karakter khusus di
+ * cmd.exe ketika delayed expansion menyala — nilainya bisa terpotong tanpa ada
+ * yang menyadarinya sampai halaman petugas menolak sandi yang "sudah benar".
+ * Formulir di peramban tidak punya kelas kesalahan itu sama sekali.
+ */
+function perluDisiapkan() {
+  return { syncSecret: !konf.secret, sandiPetugas: !SANDI_PETUGAS };
+}
+
+app.get('/api/siapkan', (_req, res) => {
+  const perlu = perluDisiapkan();
+  res.json({ perlu, selesai: !perlu.syncSecret && !perlu.sandiPetugas, baseUrl: konf.baseUrl });
+});
+
+app.post('/api/siapkan', (req, res) => {
+  const perlu = perluDisiapkan();
+
+  /*
+   * Hanya yang MASIH kosong yang boleh diisi lewat sini.
+   *
+   * Tanpa batas ini, halaman penyiapan menjadi cara siapa pun yang bisa
+   * menjangkau kiosk untuk mengganti sandi petugas dan kunci server — tanpa
+   * perlu tahu nilai yang lama.
+   */
+  const baru = {};
+  if (perlu.syncSecret) {
+    const nilai = bersihkan(req.body?.syncSecret, 200);
+    if (nilai) baru.SYNC_SECRET = nilai;
+  }
+  if (perlu.sandiPetugas) {
+    const nilai = String(req.body?.sandiPetugas ?? '').trim().slice(0, 200);
+    if (nilai) baru.SANDI_PETUGAS = nilai;
+  }
+
+  if (!Object.keys(baru).length) {
+    return res.status(400).json({ galat: 'Tidak ada yang perlu disimpan.' });
+  }
+
+  try {
+    tulisEnv(baru);
+  } catch (galat) {
+    return res.status(500).json({ galat: `Gagal menulis kiosk/.env: ${galat.message}` });
+  }
+
+  /*
+   * Nilainya langsung berlaku, tanpa menyalakan ulang kiosk.
+   *
+   * Menyuruh petugas menutup jendela hitam lalu membukanya lagi adalah langkah
+   * tambahan yang bisa dilupakan, dan kiosk yang tampak sudah siap padahal
+   * belum akan menyesatkan.
+   */
+  if (baru.SYNC_SECRET) {
+    konf.secret = baru.SYNC_SECRET;
+    sinkron.secret = baru.SYNC_SECRET;
+    tarikMember().catch(() => {});
+  }
+  if (baru.SANDI_PETUGAS) SANDI_PETUGAS = baru.SANDI_PETUGAS;
+
+  console.log(`  [siapkan] ${Object.keys(baru).join(', ')} tersimpan`);
+  res.json({ ok: true, tersimpan: Object.keys(baru), selesai: !perluDisiapkan().syncSecret });
+});
+
+/**
+ * Tulis atau perbarui baris di kiosk/.env tanpa merusak isi yang sudah ada.
+ *
+ * Baris lain dipertahankan apa adanya — termasuk komentar dan setelan yang
+ * disunting tangan oleh petugas — karena menulis ulang seluruh berkas berarti
+ * diam-diam membuang apa pun yang tidak dikenali kode ini.
+ */
+function tulisEnv(nilai) {
+  const berkas = path.join(AKAR, '.env');
+  let baris = [];
+  try {
+    baris = readFileSync(berkas, 'utf8').split(/\r?\n/);
+  } catch { /* belum ada; dibuat baru */ }
+
+  for (const [kunci, isi] of Object.entries(nilai)) {
+    const pola = new RegExp(`^\\s*${kunci}\\s*=`);
+    const i = baris.findIndex((b) => pola.test(b));
+    if (i >= 0) baris[i] = `${kunci}=${isi}`;
+    else baris.push(`${kunci}=${isi}`);
+  }
+
+  writeFileSync(berkas, baris.join('\n').replace(/\n+$/, '') + '\n');
+}
 
 /* ---------------------------- penjelajah data ----------------------------- */
 
@@ -1184,6 +1328,89 @@ const pemantauPrinter = setInterval(() => {
     .catch(() => {});
 }, 5000);
 pemantauPrinter.unref?.();
+
+/*
+ * Pencari printer yang berjalan sendiri.
+ *
+ * Dijalankan lebih jarang daripada pemulih di atas karena penyapuan jaringan
+ * jauh lebih mahal, dan `pastikan` keluar seketika selama printer sekarang
+ * masih menjawab — biaya sesungguhnya hanya muncul saat printer benar-benar
+ * hilang. Inilah yang membuat printer yang dicabut lalu dicolok ke porta lain,
+ * atau yang mendapat alamat DHCP berbeda, tersambung lagi tanpa disentuh.
+ */
+const pencariPrinter = setInterval(() => {
+  if (konf.dryRun) return;
+  printerOtomatis
+    .pastikan()
+    .then((h) => h.berubah && console.log(`  [printer] ${h.alasan}`))
+    .catch(() => {});
+}, 20_000);
+pencariPrinter.unref?.();
+
+/* ------------------------------- printer API ------------------------------ */
+
+app.get('/api/printer', async (_req, res) => {
+  const [status, sistem] = await Promise.all([printer.status(), printerOtomatis.printerSistem()]);
+  res.json({ ...printerOtomatis.ringkas(), status, sistem });
+});
+
+/** Sapu jaringan sekarang juga, lalu pakai hasilnya bila jelas. */
+app.post('/api/printer/cari', async (_req, res) => {
+  try {
+    const hasil = await printerOtomatis.pastikan({ paksaSapu: true });
+    const [status, sistem] = await Promise.all([printer.status(), printerOtomatis.printerSistem()]);
+    res.json({ ...hasil, ...printerOtomatis.ringkas(), status, sistem });
+  } catch (galat) {
+    res.status(500).json({ galat: galat.message });
+  }
+});
+
+/** Pilihan manusia menimpa apa pun, dan diingat di mesin ini. */
+app.post('/api/printer/pilih', async (req, res) => {
+  const host = bersihkan(req.body?.host, 60) || null;
+  const nama = bersihkan(req.body?.nama, 120) || null;
+  const port = Number(req.body?.port) || 9100;
+
+  if (!host && !nama) return res.status(400).json({ galat: 'Sebutkan host atau nama printer.' });
+
+  printerOtomatis.pilih({ host, port, nama });
+  res.json({ ...printerOtomatis.ringkas(), status: await printer.status() });
+});
+
+/**
+ * Cetak struk percobaan.
+ *
+ * Satu-satunya cara membuktikan printer benar — "porta 9100 terbuka" hanya
+ * membuktikan ada yang mendengarkan di sana, bukan bahwa kertas keluar.
+ */
+app.post('/api/printer/uji', async (_req, res) => {
+  try {
+    /*
+     * Struk uji memakai jalur cetak yang SAMA dengan struk tamu.
+     *
+     * Kalau ia memakai jalur sendiri yang lebih sederhana, ia akan berhasil di
+     * saat struk sungguhan gagal, dan petugas berangkat ke acara dengan
+     * keyakinan yang keliru.
+     */
+    const buffer = printer.susun({
+      jenis: 'undangan',
+      nama: 'UJI PRINTER',
+      pesan: '',
+      kode: 'UJI0',
+      url: urlUntuk('UJI0'),
+      namaAcara: konf.namaAcara,
+      waktu: waktuLokal(new Date()),
+      nomorAntrian: 0,
+      member: null,
+      kodePromo: null,
+    });
+
+    await printer.kirim(buffer, { tunggu: true });
+    res.json({ ok: true, tujuan: printerOtomatis.ringkas().dipakai });
+  } catch (galat) {
+    res.status(500).json({ ok: false, galat: galat.message });
+  }
+});
 
 // Hanya localhost: kiosk tidak punya alasan menerima koneksi dari jaringan.
 app.listen(konf.port, '127.0.0.1', () => {

@@ -233,9 +233,34 @@ let aliranKamera = null;
  * dicolok, dan kiosk yang sama dijalankan di beberapa PC.
  */
 const KUNCI_KAMERA = 'kameraPilihan';
+const KUNCI_MIK = 'mikPilihan';
 
 function kameraTersimpan() {
   try { return localStorage.getItem(KUNCI_KAMERA) || ''; } catch { return ''; }
+}
+
+function mikTersimpan() {
+  try { return localStorage.getItem(KUNCI_MIK) || ''; } catch { return ''; }
+}
+
+/**
+ * Syarat mikrofon untuk merekam ucapan.
+ *
+ * Perangkatnya disebut secara eksplisit bila petugas sudah memilihnya. Ini
+ * bagian yang paling sering salah di Windows: peramban memakai perangkat
+ * rekam BAWAAN SISTEM, sedangkan mikrofon webcam biasanya bukan bawaan. Yang
+ * dipilih di dalam aplikasi Camera Windows tidak berlaku di sini — pilihan itu
+ * milik aplikasi itu sendiri.
+ *
+ * echoCancellation dan noiseSuppression dimatikan. Keduanya dirancang untuk
+ * panggilan suara; di atrium yang ramai keduanya menafsirkan keramaian sebagai
+ * derau dan bisa menekan suara tamu sampai nyaris hilang. Yang direkam di sini
+ * ucapan selamat, bukan rapat.
+ */
+function syaratAudio() {
+  const dasar = { echoCancellation: false, noiseSuppression: false, autoGainControl: true };
+  const id = mikTersimpan();
+  return id ? { ...dasar, deviceId: { exact: id } } : dasar;
 }
 
 function simpanKamera(id) {
@@ -267,7 +292,7 @@ async function bukaKamera({ audio }) {
 
   lepasKamera();
 
-  const suara = audio ? { echoCancellation: true, noiseSuppression: true } : false;
+  const suara = audio ? syaratAudio() : false;
   const pilihan = kameraTersimpan();
 
   try {
@@ -285,13 +310,27 @@ async function bukaKamera({ audio }) {
      * berikutnya tidak gagal dengan cara yang sama. Petugas bisa memilih ulang
      * dari panel.
      */
-    const perangkatHilang = pilihan &&
+    const bisaJadiPilihan = Boolean(pilihan) || Boolean(mikTersimpan());
+    const perangkatHilang = bisaJadiPilihan &&
       ['OverconstrainedError', 'NotFoundError', 'NotReadableError'].includes(galat.name);
     if (!perangkatHilang) throw galat;
 
-    console.warn('[kamera] pilihan tersimpan tidak bisa dipakai:', galat.name);
+    /*
+     * Kedua pilihan dilupakan sekaligus, bukan hanya kameranya.
+     *
+     * Galatnya tidak memberi tahu perangkat mana yang hilang, dan webcam USB
+     * membawa kamera DAN mikrofonnya sekaligus — mencabutnya mematikan
+     * keduanya. Mempertahankan salah satunya berarti percobaan berikutnya gagal
+     * lagi dengan galat yang sama.
+     */
+    console.warn('[kamera] perangkat pilihan tidak bisa dipakai:', galat.name);
     simpanKamera('');
-    aliranKamera = await navigator.mediaDevices.getUserMedia({ video: syaratVideo(''), audio: suara });
+    try { localStorage.removeItem(KUNCI_MIK); } catch { /* mode privat */ }
+
+    aliranKamera = await navigator.mediaDevices.getUserMedia({
+      video: syaratVideo(''),
+      audio: audio ? { autoGainControl: true } : false,
+    });
   }
 
   return aliranKamera;
@@ -1285,6 +1324,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  /*
+   * Pemilih kamera pindah ke halaman Perangkat, yang punya pratinjau dan meter
+   * suara. Penangan ini dibiarkan berpenjaga supaya halaman yang masih memuat
+   * pemilihnya tetap bekerja.
+   */
   const pilihKamera = $('#pilih-kamera');
   if (pilihKamera) {
     pilihKamera.addEventListener('change', () => {

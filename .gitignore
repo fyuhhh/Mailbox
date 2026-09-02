@@ -9,6 +9,17 @@ data/
 .env.*
 !.env.example
 
+# Nilai bawaan yang BUKAN rahasia — alamat server, ukuran kertas, nama acara.
+# Ikut di sini dengan sengaja: inilah yang membuat PC baru cukup menarik kode
+# lalu jalan, tanpa ada yang perlu disesuaikan.
+!.env.default
+
+# Catatan rahasia yang ditulis tangan. Pernah berisi SYNC_SECRET dan sandi
+# petugas dalam teks polos.
+kode.txt
+catatan-rahasia*
+*rahasia*.txt
+
 # Data awal yang ditanam ke PC baru.
 #
 # Berkas .db di dalamnya berisi 16 ribu nama dan nomor telepon member asli —
