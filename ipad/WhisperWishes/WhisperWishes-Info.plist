@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Kunci wajib. GENERATE_INFOPLIST_FILE dimatikan supaya berkas ini yang
+       berlaku sepenuhnya, dan konsekuensinya Xcode tidak lagi menyisipkan
+       kunci-kunci ini sendiri. Tanpa CFBundleIdentifier, aplikasinya terbangun
+       tetapi ditolak saat dipasang dengan pesan "Missing bundle ID". -->
+  <key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+  <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
+  <key>CFBundleName</key><string>$(PRODUCT_NAME)</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+  <key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
+  <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
+  <key>LSRequiresIPhoneOS</key><true/>
+
+  <key>UIApplicationSceneManifest</key>
+  <dict>
+    <key>UIApplicationSupportsMultipleScenes</key><false/>
+  </dict>
+
+  <key>CFBundleDevelopmentRegion</key><string>en</string>
+  <key>CFBundleDisplayName</key><string>Whisper Wishes</string>
+  <key>UILaunchScreen</key>
+  <dict><key>UIColorName</key><string></string></dict>
+
+  <!-- Hanya lanskap. iPad dipasang berbaring di dudukan; membiarkan potret
+       berarti tampilan berputar setiap kali ada yang menyenggol perangkatnya. -->
+  <key>UISupportedInterfaceOrientations~ipad</key>
+  <array>
+    <string>UIInterfaceOrientationLandscapeLeft</string>
+    <string>UIInterfaceOrientationLandscapeRight</string>
+  </array>
+  <key>UISupportedInterfaceOrientations</key>
+  <array>
+    <string>UIInterfaceOrientationLandscapeLeft</string>
+    <string>UIInterfaceOrientationLandscapeRight</string>
+  </array>
+  <key>UIRequiresFullScreen</key><true/>
+  <key>UIStatusBarHidden</key><true/>
+  <key>UIViewControllerBasedStatusBarAppearance</key><false/>
+
+  <key>NSCameraUsageDescription</key>
+  <string>Merekam video ucapan selamat dari tamu.</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Merekam suara ucapan selamat dari tamu.</string>
+  <key>NSPhotoLibraryAddUsageDescription</key>
+  <string>Menyimpan salinan cadangan video ucapan ke galeri.</string>
+
+  <!-- Berkas rekaman bisa ditarik lewat Finder tanpa aplikasi tambahan. -->
+  <key>UIFileSharingEnabled</key><true/>
+  <key>LSSupportsOpeningDocumentsInPlace</key><true/>
+</dict>
+</plist>
