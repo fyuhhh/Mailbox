@@ -52,6 +52,9 @@ export function bukaDb(berkas) {
     ['member_id', 'TEXT'],
     ['video', 'TEXT'],
     ['video_terkirim', 'INTEGER NOT NULL DEFAULT 0'],
+    // Rekaman apa adanya, tanpa bingkai. Disimpan terpisah supaya bahan
+    // aslinya tetap ada bila bingkainya kelak perlu diganti atau dilepas.
+    ['video_mentah', 'TEXT'],
   ]) {
     const ada = db.prepare(`SELECT 1 FROM pragma_table_info('tamu') WHERE name = ?`).get(kolom);
     if (!ada) db.exec(`ALTER TABLE tamu ADD COLUMN ${kolom} ${definisi}`);
@@ -102,13 +105,18 @@ export function bukaDb(berkas) {
        ORDER BY id LIMIT ?
     `),
     videoTerkirim: db.prepare('UPDATE tamu SET video_terkirim = 1 WHERE kode = ?'),
+    setVideoMentah: db.prepare('UPDATE tamu SET video_mentah = ? WHERE kode = ?'),
   };
 
   return {
     db,
     kodeDipakai: (kode) => Boolean(st.adaKode.get(kode)),
-    simpanTamu({ kode, nama, pesan, dibuatPada, jenis = 'undangan', memberId = null, video = null }) {
+    simpanTamu({ kode, nama, pesan, dibuatPada, jenis = 'undangan', memberId = null, video = null, videoMentah = null }) {
       const hasil = st.sisip.run(kode, nama, pesan ?? '', dibuatPada, jenis, memberId, video);
+      // Kolom mentah diperbarui terpisah: pernyataan sisip di atas dibentuk
+      // sebelum kolom ini ada, dan menambah parameter di sana akan memutus
+      // basis data lama yang tabelnya belum punya kolomnya.
+      if (videoMentah) st.setVideoMentah.run(videoMentah, kode);
       return st.ambilKode.get(kode) ?? { id: hasil.lastInsertRowid, kode, nama, pesan };
     },
     ambilTamu: (kode) => st.ambilKode.get(kode),

@@ -82,6 +82,28 @@ video.pratinjau {
 .baris-printer b { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
 .baris-printer small { display: block; color: var(--tinta-redup); font-size: .74rem; }
 
+.saklar { display: inline-flex; align-items: center; gap: .5rem; font-size: .92rem; font-weight: 600; }
+.saklar input { width: 1.1rem; height: 1.1rem; }
+
+.tata-bingkai {
+  display: grid; grid-template-columns: auto 1fr; gap: 1.2rem;
+  align-items: start; margin-top: .9rem;
+}
+
+#pratinjau-bingkai {
+  width: 15rem; max-width: 100%; height: auto;
+  border-radius: .7rem; background: #14101d; display: block;
+}
+
+.geser label { display: block; margin-bottom: .8rem; font-size: .86rem; font-weight: 600; }
+.geser label b { float: right; font-variant-numeric: tabular-nums; color: var(--ungu); }
+.geser input[type="range"] { width: 100%; margin-top: .3rem; accent-color: var(--ungu); }
+
+@media (max-width: 40rem) {
+  .tata-bingkai { grid-template-columns: 1fr; }
+  #pratinjau-bingkai { width: 100%; max-width: 15rem; margin: 0 auto; }
+}
+
 .pesan { margin-top: .7rem; font-size: .86rem; }
 .pesan.buruk { color: var(--bahaya); font-weight: 600; }
 .pesan.baik { color: var(--aman); font-weight: 600; }
@@ -123,6 +145,41 @@ video.pratinjau {
       <audio id="putar-uji" controls hidden style="max-width:100%"></audio>
     </div>
     <p class="pesan" id="pesan-mik"></p>
+  </section>
+
+  <!-- ============================ BINGKAI VIDEO ========================= -->
+  <section class="kartu">
+    <h2>Bingkai Video <span class="lencana nanti" id="lencana-bingkai">memeriksa</span></h2>
+    <p class="jelas">
+      Hasil rekaman disimpan dua kali: satu dengan bingkai, satu mentah tanpa
+      bingkai. Atur posisi video di dalam bingkai di sini &mdash; pratinjau di bawah
+      memakai kamera sungguhan, jadi yang kamu lihat persis yang akan tersimpan.
+    </p>
+
+    <div class="deret">
+      <label class="saklar"><input type="checkbox" id="bingkai-aktif"> Pakai bingkai</label>
+    </div>
+
+    <div class="tata-bingkai">
+      <canvas id="pratinjau-bingkai" width="360" height="640"></canvas>
+
+      <div class="geser">
+        <label>Perbesar <b id="nilai-skala">100%</b>
+          <input type="range" id="bingkai-skala" min="50" max="250" step="1" value="100"></label>
+
+        <label>Geser mendatar <b id="nilai-x">0%</b>
+          <input type="range" id="bingkai-x" min="-100" max="100" step="1" value="0"></label>
+
+        <label>Geser tegak <b id="nilai-y">0%</b>
+          <input type="range" id="bingkai-y" min="-100" max="100" step="1" value="0"></label>
+
+        <div class="deret">
+          <button type="button" class="tombol-alat" id="bingkai-pas">Paskan otomatis</button>
+          <button type="button" class="tombol-alat utama" id="bingkai-simpan">Simpan</button>
+        </div>
+        <p class="pesan" id="pesan-bingkai"></p>
+      </div>
+    </div>
   </section>
 
   <!-- ============================== PRINTER ============================= -->
@@ -376,6 +433,152 @@ $('#rekam-uji').addEventListener('click', function () {
   }, 1000);
 });
 
+/* ============================ BINGKAI VIDEO ============================== */
+
+var bingkai = null;
+var gambarBingkai = null;
+var lukisBingkai = null;
+
+function nilaiGeser() {
+  return {
+    aktif: document.getElementById('bingkai-aktif').checked ? 1 : 0,
+    skala: Number(document.getElementById('bingkai-skala').value),
+    geserX: Number(document.getElementById('bingkai-x').value),
+    geserY: Number(document.getElementById('bingkai-y').value),
+  };
+}
+
+function tulisAngka() {
+  var n = nilaiGeser();
+  document.getElementById('nilai-skala').textContent = n.skala + '%';
+  document.getElementById('nilai-x').textContent = n.geserX + '%';
+  document.getElementById('nilai-y').textContent = n.geserY + '%';
+}
+
+function mulaiLukis() {
+  cancelAnimationFrame(lukisBingkai);
+
+  var kanvas = document.getElementById('pratinjau-bingkai');
+  var ctx = kanvas.getContext('2d', { alpha: false });
+  var video = document.getElementById('pratinjau');
+
+  function satuBingkai() {
+    var L = kanvas.width, T = kanvas.height;
+    var n = nilaiGeser();
+
+    ctx.fillStyle = '#14101d';
+    ctx.fillRect(0, 0, L, T);
+
+    var vw = video.videoWidth, vh = video.videoHeight;
+    if (vw && vh) {
+      /*
+       * Perhitungannya SAMA PERSIS dengan yang dipakai saat merekam.
+       * Kalau berbeda sedikit saja, pratinjau ini berbohong — dan bohongnya
+       * baru ketahuan sesudah acara, saat rekamannya ditonton.
+       */
+      var dasar = Math.min(L / vw, T / vh);
+      var skala = dasar * (n.skala / 100);
+      var dw = vw * skala, dh = vh * skala;
+      var dx = (L - dw) / 2 + (n.geserX / 100) * L;
+      var dy = (T - dh) / 2 + (n.geserY / 100) * T;
+      ctx.drawImage(video, dx, dy, dw, dh);
+    }
+
+    if (n.aktif && gambarBingkai) ctx.drawImage(gambarBingkai, 0, 0, L, T);
+
+    lukisBingkai = requestAnimationFrame(satuBingkai);
+  }
+  satuBingkai();
+}
+
+function muatBingkai() {
+  fetch('/api/bingkai')
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      bingkai = d;
+      document.getElementById('bingkai-aktif').checked = !!d.aktif;
+      document.getElementById('bingkai-skala').value = d.skala;
+      document.getElementById('bingkai-x').value = d.geserX;
+      document.getElementById('bingkai-y').value = d.geserY;
+      tulisAngka();
+
+      if (!d.ada) {
+        lencana('#lencana-bingkai', 'buruk', 'gambar tidak ada');
+        document.getElementById('pesan-bingkai').textContent =
+          'Berkas kiosk/public/bingkai.png tidak ditemukan.';
+        document.getElementById('pesan-bingkai').className = 'pesan buruk';
+        return;
+      }
+
+      var img = new Image();
+      img.onload = function () {
+        gambarBingkai = img;
+        lencana('#lencana-bingkai', d.aktif ? 'baik' : 'nanti', d.aktif ? 'dipakai' : 'dimatikan');
+        mulaiLukis();
+      };
+      img.onerror = function () {
+        lencana('#lencana-bingkai', 'buruk', 'gagal dimuat');
+      };
+      img.src = '/bingkai.png';
+    })
+    .catch(function () { lencana('#lencana-bingkai', 'buruk', 'gagal'); });
+}
+
+['bingkai-skala', 'bingkai-x', 'bingkai-y'].forEach(function (id) {
+  document.getElementById(id).addEventListener('input', tulisAngka);
+});
+
+document.getElementById('bingkai-aktif').addEventListener('change', function () {
+  lencana('#lencana-bingkai', this.checked ? 'baik' : 'nanti', this.checked ? 'dipakai' : 'dimatikan');
+});
+
+/*
+ * "Paskan otomatis" mengisi tinggi bingkai, bukan lebarnya.
+ *
+ * Bingkai berbentuk potret sementara webcam memberi gambar lanskap. Memaskan
+ * lebar menyisakan pita hitam besar di atas dan bawah; memaskan tinggi membuat
+ * wajah tamu memenuhi bingkai, dan itu yang dicari.
+ */
+document.getElementById('bingkai-pas').addEventListener('click', function () {
+  var video = document.getElementById('pratinjau');
+  var kanvas = document.getElementById('pratinjau-bingkai');
+  if (!video.videoWidth) return;
+
+  var dasar = Math.min(kanvas.width / video.videoWidth, kanvas.height / video.videoHeight);
+  var perlu = kanvas.height / video.videoHeight;
+  var persen = Math.round((perlu / dasar) * 100);
+
+  document.getElementById('bingkai-skala').value = Math.min(250, Math.max(50, persen));
+  document.getElementById('bingkai-x').value = 0;
+  document.getElementById('bingkai-y').value = 0;
+  tulisAngka();
+});
+
+document.getElementById('bingkai-simpan').addEventListener('click', function () {
+  var b = this;
+  var n = nilaiGeser();
+  b.disabled = true;
+
+  fetch('/api/bingkai', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(Object.assign({}, bingkai, n)),
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      bingkai = d;
+      var p = document.getElementById('pesan-bingkai');
+      p.textContent = 'Tersimpan. Berlaku untuk rekaman berikutnya.';
+      p.className = 'pesan baik';
+    })
+    .catch(function () {
+      var p = document.getElementById('pesan-bingkai');
+      p.textContent = 'Gagal menyimpan.';
+      p.className = 'pesan buruk';
+    })
+    .finally(function () { b.disabled = false; });
+});
+
 /* =============================== PRINTER ================================= */
 
 function gambarPrinter(d) {
@@ -482,6 +685,7 @@ $('#uji-printer').addEventListener('click', function () {
 
 navigator.mediaDevices.addEventListener('devicechange', function () { isiDaftar(); });
 nyalakan();
+muatBingkai();
 muatPrinter();
 setInterval(muatPrinter, 10000);
 </script>

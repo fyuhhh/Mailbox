@@ -51,3 +51,6 @@ promocode-*.xlsx
 undangan/node_modules/
 node/
 node.exe
+
+# Salinan gambar yang tidak sengaja tertinggal di folder kerja.
+Template*copy*.JPG

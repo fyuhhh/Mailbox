@@ -67,6 +67,13 @@
   font-size: .9rem;
   color: var(--tinta-redup);
 }
+/* Rekaman mentah dibedakan supaya tidak tertukar dengan hasil jadi saat
+   petugas mengirimkannya ke siapa pun. */
+.tanda-mentah {
+  display: inline-block; margin-left: .4rem; padding: .05rem .4rem;
+  border-radius: 99rem; background: rgba(107,78,143,.16); color: var(--ungu);
+  font-size: .62rem; font-weight: 800; letter-spacing: .06em; vertical-align: middle;
+}
 </style>
 </head>
 <body class="badan-scan">
@@ -121,8 +128,10 @@ function gambar(data) {
 
     baris.innerHTML =
       '<div class="rekaman-info">' +
-        '<b>' + (r.nama || 'Tamu terhapus') + '</b>' +
-        '<small>' + r.kode + ' · ' + r.ukuranMB + ' MB · ' + tgl + ' ' + jam + '</small>' +
+        '<b>' + (r.nama || 'Tamu terhapus') +
+          (r.mentah ? ' <span class="tanda-mentah">MENTAH</span>' : '') + '</b>' +
+        '<small>' + r.kode + ' · ' + (r.mentah ? 'tanpa bingkai · ' : 'berbingkai · ') +
+          r.ukuranMB + ' MB · ' + tgl + ' ' + jam + '</small>' +
       '</div>' +
       '<div class="rekaman-aksi">' +
         '<button type="button" data-putar>Putar</button>' +

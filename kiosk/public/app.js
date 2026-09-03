@@ -48,8 +48,10 @@ const keadaan = {
   nama: '',
   memberId: null,
   nomorHp: '',
-  videoId: null,        // id unggahan; diisi begitu rekaman terkirim
+  videoId: null,        // id unggahan hasil berbingkai
+  videoMentahId: null,  // id unggahan salinan mentah, bila ada
   blobRekaman: null,
+  blobMentah: null,
   kodeTerakhir: null,
   ketukLampu: 0,
 };
@@ -149,7 +151,8 @@ function mulaiUlang() {
 
   Object.assign(keadaan, {
     jalur: 'tamu', nama: '', memberId: null, nomorHp: '',
-    videoId: null, blobRekaman: null, kodeTerakhir: null,
+    videoId: null, videoMentahId: null,
+    blobRekaman: null, blobMentah: null, kodeTerakhir: null,
   });
 
   for (const kunci of ['nama']) {
@@ -633,7 +636,9 @@ const MIN_REKAM_DETIK = 3;
 async function mulaiRekam() {
   clearInterval(timerSiap);
   keadaan.blobRekaman = null;
+  keadaan.blobMentah = null;
   keadaan.videoId = null;
+  keadaan.videoMentahId = null;
 
   keLayar('rekam');
   $('#tanda-rekam').hidden = true;
@@ -656,6 +661,15 @@ async function mulaiRekam() {
   const video = $('#video-rekam');
   video.srcObject = aliran;
   await video.play();
+
+  /*
+   * Bingkai disiapkan selama hitungan mundur, bukan saat perekaman dimulai.
+   *
+   * Memuat gambar 1,2 MB tepat pada detik pertama rekaman membuat bingkai
+   * pertama terlewat dan awal ucapan tamu terekam tanpa hiasan. Hitungan
+   * mundur memberi jeda beberapa detik yang memang sudah ada.
+   */
+  siapkanBingkai().catch(() => {});
 
   hitungAbaAba(aliran);
 }
@@ -700,16 +714,150 @@ function tipeRekaman() {
   return pilihan.find((t) => MediaRecorder.isTypeSupported?.(t)) ?? '';
 }
 
+/* ============================== BINGKAI VIDEO ============================= */
+
+let setelanBingkai = null;
+let gambarBingkai = null;
+let kanvasBingkai = null;
+let gambarUlangBingkai = null;
+let perekamMentah = null;
+
+/** Ambil setelan bingkai dan muat gambarnya sekali, lalu simpan di ingatan. */
+async function siapkanBingkai() {
+  if (setelanBingkai && gambarBingkai) return setelanBingkai;
+
+  try {
+    setelanBingkai = await (await fetch('/api/bingkai')).json();
+  } catch {
+    setelanBingkai = { aktif: 0 };
+    return setelanBingkai;
+  }
+
+  if (!setelanBingkai.aktif || !setelanBingkai.ada) return setelanBingkai;
+
+  gambarBingkai = await new Promise((selesai) => {
+    const img = new Image();
+    img.onload = () => selesai(img);
+    // Bingkai yang gagal dimuat TIDAK menghentikan perekaman. Tamu sudah
+    // berdiri di depan kamera; kehilangan hiasan jauh lebih ringan daripada
+    // kehilangan ucapannya.
+    img.onerror = () => selesai(null);
+    img.src = '/bingkai.png';
+  });
+
+  if (!gambarBingkai) setelanBingkai.aktif = 0;
+  return setelanBingkai;
+}
+
+/**
+ * Susun aliran berbingkai dari aliran kamera.
+ *
+ * Tiap bingkai gambar dilukis ke kanvas: video di bawah, berkas bingkai di
+ * atasnya. Kanvas itu lalu dijadikan aliran video tersendiri, dan jalur suara
+ * dari kamera disambungkan ke sana — captureStream tidak pernah membawa suara.
+ *
+ * Mengembalikan null bila bingkai dimatikan atau peramban tidak mendukungnya;
+ * pemanggilnya lalu merekam apa adanya.
+ */
+function aliranBerbingkai(aliranAsal, setelan) {
+  if (!setelan?.aktif || !gambarBingkai) return null;
+  if (typeof HTMLCanvasElement === 'undefined' || !HTMLCanvasElement.prototype.captureStream) return null;
+
+  const video = $('#video-rekam');
+  const L = setelan.lebar;
+  const T = setelan.tinggi;
+
+  kanvasBingkai = document.createElement('canvas');
+  kanvasBingkai.width = L;
+  kanvasBingkai.height = T;
+  const ctx = kanvasBingkai.getContext('2d', { alpha: false });
+
+  const lukis = () => {
+    ctx.fillStyle = setelan.latar || '#000000';
+    ctx.fillRect(0, 0, L, T);
+
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+
+    if (vw && vh) {
+      /*
+       * Video dipasang seperti `object-fit: contain`, lalu diperbesar oleh
+       * skala. `cover` akan memotong bagian tepi tanpa memberi tahu siapa pun,
+       * dan bagian yang terpotong itu justru wajah tamu di kamera lanskap yang
+       * dipasang di kotak potret.
+       */
+      const dasar = Math.min(L / vw, T / vh);
+      const skala = dasar * (setelan.skala / 100);
+      const dw = vw * skala;
+      const dh = vh * skala;
+      const dx = (L - dw) / 2 + (setelan.geserX / 100) * L;
+      const dy = (T - dh) / 2 + (setelan.geserY / 100) * T;
+      ctx.drawImage(video, dx, dy, dw, dh);
+    }
+
+    ctx.drawImage(gambarBingkai, 0, 0, L, T);
+    gambarUlangBingkai = requestAnimationFrame(lukis);
+  };
+  lukis();
+
+  const aliran = kanvasBingkai.captureStream(25);
+  for (const trek of aliranAsal.getAudioTracks()) aliran.addTrack(trek);
+  return aliran;
+}
+
+function hentikanLukisBingkai() {
+  cancelAnimationFrame(gambarUlangBingkai);
+  gambarUlangBingkai = null;
+  kanvasBingkai = null;
+}
+
 function rekamSekarang(aliran) {
   const mimeType = tipeRekaman();
   const potongan = [];
+  const potonganMentah = [];
+
+  /*
+   * Dua perekam berjalan bersamaan: kanvas berbingkai dan kamera apa adanya.
+   *
+   * Menyusun bingkainya SESUDAH perekaman selesai akan jauh lebih ringan bagi
+   * mesin, tetapi menuntut memutar ulang seluruh rekaman ke kanvas — lima
+   * belas detik lagi untuk tiap tamu, di depan antrean. Merekam serentak
+   * memakai lebih banyak tenaga tetapi tidak menambah waktu tunggu sedetik pun.
+   */
+  const berbingkai = aliranBerbingkai(aliran, setelanBingkai);
 
   try {
-    perekam = mimeType ? new MediaRecorder(aliran, { mimeType }) : new MediaRecorder(aliran);
+    perekam = mimeType
+      ? new MediaRecorder(berbingkai ?? aliran, { mimeType })
+      : new MediaRecorder(berbingkai ?? aliran);
   } catch (galat) {
     alert(`Perangkat ini tidak bisa merekam video: ${galat.message}`);
+    hentikanLukisBingkai();
     keLayar('siap');
     return;
+  }
+
+  /*
+   * Perekam mentah hanya dipasang bila bingkai memang dipakai.
+   *
+   * Tanpa bingkai, keduanya akan merekam hal yang persis sama — dua berkas
+   * kembar yang memakan tenaga dan ruang tanpa menambah apa pun.
+   */
+  perekamMentah = null;
+  if (berbingkai) {
+    try {
+      perekamMentah = mimeType ? new MediaRecorder(aliran, { mimeType }) : new MediaRecorder(aliran);
+      perekamMentah.ondataavailable = (ev) => { if (ev.data?.size) potonganMentah.push(ev.data); };
+      perekamMentah.onstop = () => {
+        keadaan.blobMentah = new Blob(potonganMentah, { type: perekamMentah.mimeType || 'video/webm' });
+      };
+    } catch (galat) {
+      // Mesin lemah bisa menolak perekam kedua. Rekaman berbingkai tetap jalan;
+      // yang hilang hanya salinan mentahnya, dan itu bukan alasan menggagalkan
+      // ucapan tamu yang sedang direkam.
+      console.warn('[rekam] perekam mentah tidak bisa dipasang:', galat.name);
+      perekamMentah = null;
+    }
   }
 
   perekam.ondataavailable = (ev) => { if (ev.data?.size) potongan.push(ev.data); };
@@ -717,10 +865,12 @@ function rekamSekarang(aliran) {
   perekam.onstop = () => {
     const jenis = perekam.mimeType || mimeType || 'video/webm';
     keadaan.blobRekaman = new Blob(potongan, { type: jenis });
+    hentikanLukisBingkai();
     keTinjau();
   };
 
   perekam.start();
+  perekamMentah?.start();
 
   $('#tanda-rekam').hidden = false;
   $('#rekam-pesan').textContent = 'Sampaikan ucapanmu untuk EWALK!';
@@ -769,6 +919,7 @@ function hentikanRekam() {
   }
 
   if (perekam?.state === 'recording') perekam.stop();
+  if (perekamMentah?.state === 'recording') perekamMentah.stop();
 }
 
 /* ================================= TINJAU ================================= */
@@ -799,25 +950,46 @@ function keTinjau() {
   unggahRekaman();
 }
 
+async function unggahSatu(blob) {
+  const respons = await fetch('/api/video', {
+    method: 'POST',
+    headers: { 'content-type': 'video/webm' },
+    body: blob,
+  });
+  const data = await respons.json();
+  if (!respons.ok) throw new Error(data.galat || 'gagal');
+  return data.videoId;
+}
+
 async function unggahRekaman() {
   if (!keadaan.blobRekaman) return;
 
   try {
-    const respons = await fetch('/api/video', {
-      method: 'POST',
-      headers: { 'content-type': 'video/webm' },
-      body: keadaan.blobRekaman,
-    });
-    const data = await respons.json();
-    if (!respons.ok) throw new Error(data.galat || 'gagal');
+    keadaan.videoId = await unggahSatu(keadaan.blobRekaman);
 
-    keadaan.videoId = data.videoId;
+    /*
+     * Salinan mentah diunggah SESUDAH yang berbingkai, dan kegagalannya
+     * diabaikan.
+     *
+     * Yang berbingkai adalah hasil yang dipakai; yang mentah hanya bahan
+     * cadangan. Menggagalkan seluruh unggahan karena cadangannya tidak sampai
+     * berarti membuang hasil yang sudah berhasil terkirim.
+     */
+    if (keadaan.blobMentah) {
+      try {
+        keadaan.videoMentahId = await unggahSatu(keadaan.blobMentah);
+      } catch {
+        keadaan.videoMentahId = null;
+      }
+    }
+
     $('#tinjau-status').textContent = 'Rekaman siap dikirim.';
   } catch (galat) {
     // Kegagalan unggah tidak menghentikan alur: strukmu tetap tercetak, hanya
     // tanpa video. Menahan tamu di sini akan menghentikan antrean karena
     // masalah yang tidak bisa ia perbaiki sendiri.
     keadaan.videoId = null;
+    keadaan.videoMentahId = null;
     $('#tinjau-status').textContent = 'Rekaman gagal diunggah — struk tetap bisa dicetak.';
   }
 }
@@ -837,6 +1009,7 @@ async function kirim() {
         jenis: keadaan.jalur === 'member' ? 'voucher' : 'undangan',
         memberId: keadaan.memberId,
         videoId: keadaan.videoId,
+        videoMentahId: keadaan.videoMentahId,
       }),
     });
     data = await respons.json();
@@ -861,8 +1034,19 @@ async function kirim() {
   keadaan.kodeTerakhir = data.kode;
   $('#hasil-nama').textContent = data.nama;
   $('#hasil-qr').src = data.qr;
-  $('#hasil-kode').textContent = data.kode;
-  $('#hasil-kelir').textContent = data.jenis === 'voucher' ? 'Voucher untuk' : 'Undangan untuk';
+
+  /*
+   * Layar hasil menampilkan hal yang SAMA dengan kertasnya.
+   *
+   * Untuk voucher, yang tercetak di bawah QR adalah kode promo — itu yang
+   * dibaca kasir. Menampilkan kode tamu di layar membuat dua angka berbeda
+   * beredar untuk satu orang, dan yang salah satunya akan ditunjukkan tamu ke
+   * kasir saat strukanya terselip.
+   */
+  const voucher = data.jenis === 'voucher';
+  $('#hasil-kode').textContent = voucher ? (data.kodePromo || data.kode) : data.kode;
+  $('#hasil-kelir').textContent = voucher ? 'Gift Voucher untuk' : 'Undangan untuk';
+  $('#hasil-qr').alt = voucher ? 'Kode QR gift voucher' : 'Kode QR undangan';
 
   if (data.tercetak === false) {
     catatanCetak(false);
@@ -877,8 +1061,9 @@ async function kirim() {
 }
 
 function catatanCetak(berhasil) {
+  const voucher = keadaan.jalur === 'member';
   $('#hasil-catatan').innerHTML = berhasil
-    ? 'Ambil strukmu, lalu pindai QR-nya'
+    ? (voucher ? 'Ambil strukmu — tunjukkan QR ini untuk klaim voucher' : 'Ambil strukmu, lalu pindai QR-nya')
     : '<b>Struk tidak tercetak.</b> Pindai QR di bawah ini sekarang.';
 }
 
@@ -1417,6 +1602,10 @@ document.addEventListener('DOMContentLoaded', () => {
    * diinginkan.
    */
   muatPengaturan().finally(mulaiUlang);
+
+  // Gambar bingkai dimuat sejak kiosk menyala supaya tamu pertama tidak
+  // menunggu unduhannya.
+  siapkanBingkai().catch(() => {});
   segarkanStatus();
   setInterval(segarkanStatus, 10_000);
 });

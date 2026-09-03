@@ -582,7 +582,7 @@ app.get('/api/member/ringkas', (_req, res) => {
  * dicocokkan dengan daftar tamu hanya dengan melihat nama berkasnya — hal yang
  * sangat menolong ketika ada yang harus dicari ulang di tengah acara.
  */
-function tautkanVideo(videoId, kode) {
+function tautkanVideo(videoId, kode, akhiranNama = '') {
   if (!videoId) return null;
 
   // basename memotong komponen jalur apa pun yang ikut terkirim, sehingga nilai
@@ -593,7 +593,7 @@ function tautkanVideo(videoId, kode) {
   const asal = path.join(FOLDER_VIDEO_SEMENTARA, bersih);
   if (!existsSync(asal)) return null;
 
-  const berkas = `${kode}${path.extname(bersih)}`;
+  const berkas = `${kode}${akhiranNama}${path.extname(bersih)}`;
   try {
     renameSync(asal, path.join(FOLDER_VIDEO, berkas));
     return berkas;
@@ -693,6 +693,68 @@ function butuhSandi(req, res, next) {
  */
 app.get('/api/promo', (_req, res) => {
   res.json(promo.ringkas());
+});
+
+/* ------------------------------ bingkai video ----------------------------- */
+
+const BERKAS_BINGKAI = path.join(AKAR, 'data', 'bingkai.json');
+
+/*
+ * Setelan bingkai disimpan di server, bukan di peramban.
+ *
+ * Posisi bingkai adalah keputusan produksi yang berlaku untuk seluruh rekaman
+ * acara, bukan kenyamanan per-mesin seperti pilihan kamera. Menyimpannya di
+ * localStorage berarti membersihkan data peramban — atau memakai profil
+ * berbeda — diam-diam mengembalikan bingkai ke posisi bawaan di tengah acara.
+ */
+const BINGKAI_BAWAAN = {
+  aktif: 1,
+  lebar: 720,
+  tinggi: 1280,
+  skala: 100,      // persen, terhadap ukuran "isi penuh"
+  geserX: 0,       // persen lebar
+  geserY: 0,       // persen tinggi
+  latar: '#000000',
+};
+
+function bacaBingkai() {
+  try {
+    return { ...BINGKAI_BAWAAN, ...JSON.parse(readFileSync(BERKAS_BINGKAI, 'utf8')) };
+  } catch {
+    return { ...BINGKAI_BAWAAN };
+  }
+}
+
+app.get('/api/bingkai', (_req, res) => {
+  res.json({ ...bacaBingkai(), ada: existsSync(path.join(AKAR, 'public', 'bingkai.png')) });
+});
+
+app.post('/api/bingkai', (req, res) => {
+  const b = req.body ?? {};
+  const angka = (nilai, min, maks, bawaan) => {
+    const n = Number(nilai);
+    return Number.isFinite(n) ? Math.min(maks, Math.max(min, n)) : bawaan;
+  };
+
+  const baru = {
+    aktif: Number(b.aktif) === 0 ? 0 : 1,
+    lebar: angka(b.lebar, 360, 1080, BINGKAI_BAWAAN.lebar),
+    tinggi: angka(b.tinggi, 640, 1920, BINGKAI_BAWAAN.tinggi),
+    skala: angka(b.skala, 50, 250, BINGKAI_BAWAAN.skala),
+    geserX: angka(b.geserX, -100, 100, BINGKAI_BAWAAN.geserX),
+    geserY: angka(b.geserY, -100, 100, BINGKAI_BAWAAN.geserY),
+    latar: /^#[0-9a-f]{6}$/i.test(String(b.latar)) ? String(b.latar) : BINGKAI_BAWAAN.latar,
+  };
+
+  try {
+    mkdirSync(path.dirname(BERKAS_BINGKAI), { recursive: true });
+    writeFileSync(BERKAS_BINGKAI, JSON.stringify(baru, null, 2));
+  } catch (galat) {
+    return res.status(500).json({ galat: galat.message });
+  }
+
+  console.log(`  [bingkai] setelan disimpan (skala ${baru.skala}%, geser ${baru.geserX}/${baru.geserY})`);
+  res.json(baru);
 });
 
 /* ------------------------------ penyiapan awal ---------------------------- */
@@ -1011,7 +1073,17 @@ app.post('/api/daftar', async (req, res) => {
   let tamu;
   try {
     const kode = buatKodeUnik(db.kodeDipakai);
+    /*
+     * Dua berkas disimpan: yang berbingkai dan yang mentah.
+     *
+     * Yang berbingkai memakai nama tanpa akhiran karena itulah yang dipakai di
+     * mana-mana — dikirim ke server undangan, ditampilkan di halaman rekaman.
+     * Yang mentah diberi akhiran "-mentah" dan tinggal di PC ini saja: bahan
+     * asli tanpa bingkai, kalau kelak bingkainya perlu diganti atau dilepas.
+     */
     const video = tautkanVideo(req.body?.videoId, kode);
+    const videoMentah = tautkanVideo(req.body?.videoMentahId, kode, '-mentah');
+
     tamu = db.simpanTamu({
       kode,
       nama,
@@ -1020,6 +1092,7 @@ app.post('/api/daftar', async (req, res) => {
       jenis,
       memberId,
       video,
+      videoMentah,
     });
   } catch (galat) {
     return res.status(500).json({ galat: galat.message });
@@ -1052,7 +1125,18 @@ app.post('/api/daftar', async (req, res) => {
   ]);
 
   const url = urlUntuk(tamu.kode);
-  const qr = await QRCode.toDataURL(url, {
+
+  /*
+   * QR di layar harus SAMA PERSIS dengan yang tercetak di kertas.
+   *
+   * Struk voucher membawa kode promo di dalam QR-nya supaya bisa dipindai
+   * sistem PAM-PLUS; layar hasil dulu selalu menggambar QR undangan. Tamu
+   * memindai yang di layar, mendapat halaman undangan, dan menyimpulkan
+   * vouchernya gagal — padahal kertas di tangannya benar.
+   */
+  const isiQr = tamu.jenis === 'voucher' && kodePromo ? kodePromo : url;
+
+  const qr = await QRCode.toDataURL(isiQr, {
     errorCorrectionLevel: 'M',
     margin: 2,
     scale: 12,
@@ -1214,7 +1298,16 @@ app.get('/api/rekaman', (_req, res) => {
   }
 
   const daftar = berkas.map((nama) => {
-    const kode = nama.replace(/\.[^.]+$/, '').toUpperCase();
+    /*
+     * Akhiran "-mentah" dilucuti sebelum mencari tamunya.
+     *
+     * Sejak rekaman disimpan dua kali, berkas mentah bernama <kode>-mentah.webm.
+     * Tanpa pelucutan ini kodenya terbaca "B5HZ-MENTAH", tamunya tidak ketemu,
+     * dan seluruh baris itu tampil tanpa nama seolah rekaman milik entah siapa.
+     */
+    const dasar = nama.replace(/\.[^.]+$/, '');
+    const mentah = /-mentah$/i.test(dasar);
+    const kode = dasar.replace(/-mentah$/i, '').toUpperCase();
     const tamu = db.ambilTamu(kode);
     let ukuran = 0;
     let dibuat = null;
@@ -1226,6 +1319,7 @@ app.get('/api/rekaman', (_req, res) => {
     return {
       kode,
       berkas: nama,
+      mentah,
       nama: tamu?.nama ?? null,
       nomor: tamu?.id ?? null,
       jenis: tamu?.jenis ?? null,

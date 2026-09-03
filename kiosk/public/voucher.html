@@ -230,17 +230,27 @@ td.kode { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-weight: 7
  * tangan; karcis yang bertahan sampai besok berarti siapa pun yang membuka tab
  * itu lagi langsung melihat seluruh kode voucher tanpa ditanya apa-apa.
  */
+/*
+ * Halaman ini memakai karcis TERPISAH dari halaman petugas lain.
+ *
+ * Semula seluruh halaman petugas berbagi satu karcis, jadi membuka Data Kiosk
+ * sekali ikut membuka daftar kode voucher tanpa ditanya lagi. Kode voucher
+ * adalah barang bernilai yang bisa langsung ditukar di kasir — halamannya
+ * meminta sandi sendiri, sesering apa pun halaman lain sudah dibuka.
+ */
+var KUNCI_KARCIS = 'karcis-voucher';
+
 var karcis = null;
-try { karcis = sessionStorage.getItem('karcis-petugas'); } catch (e) { karcis = null; }
+try { karcis = sessionStorage.getItem(KUNCI_KARCIS); } catch (e) { karcis = null; }
 
 function simpanKarcis(t) {
   karcis = t;
-  try { sessionStorage.setItem('karcis-petugas', t); } catch (e) { /* mode privat */ }
+  try { sessionStorage.setItem(KUNCI_KARCIS, t); } catch (e) { /* mode privat */ }
 }
 
 function lupakanKarcis() {
   karcis = null;
-  try { sessionStorage.removeItem('karcis-petugas'); } catch (e) { /* mode privat */ }
+  try { sessionStorage.removeItem(KUNCI_KARCIS); } catch (e) { /* mode privat */ }
   document.getElementById('isi-halaman').hidden = true;
   document.getElementById('kunci').hidden = false;
   document.getElementById('kabar').textContent = 'terkunci';
