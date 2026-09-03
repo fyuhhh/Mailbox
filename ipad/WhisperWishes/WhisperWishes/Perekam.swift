@@ -28,8 +28,14 @@ final class Perekam: NSObject, ObservableObject {
     @Published var pesan: String = ""
     @Published var siap: Bool = false
 
-    /// Berkas hasil rekaman terakhir, di dalam folder Dokumen aplikasi.
+    /// Rekaman mentah terakhir, di dalam folder Dokumen aplikasi.
     @Published private(set) var berkasTerakhir: URL?
+
+    /// Salinan berbingkai. Nil selama penyusunannya belum selesai.
+    @Published private(set) var berkasBerbingkai: URL?
+
+    /// Benar selama bingkai sedang ditempelkan.
+    @Published private(set) var sedangMenyusun = false
 
     let sesi = AVCaptureSession()
     private let keluaran = AVCaptureMovieFileOutput()
@@ -169,22 +175,62 @@ final class Perekam: NSObject, ObservableObject {
         }
     }
 
+    /**
+     Tempelkan bingkai, sebagai berkas kedua.
+
+     Dijalankan begitu perekaman berhenti — bukan saat tombol ditekan — supaya
+     penyusunannya berjalan selagi tamu membaca layar "Send Your Wishes".
+     Sesudah tiga puluh detik merekam, menahannya lagi belasan detik di depan
+     tombol adalah cara yang bagus untuk menumpuk antrean.
+     */
+    private func susunBerbingkai(_ mentah: URL) {
+        sedangMenyusun = true
+        berkasBerbingkai = nil
+
+        let tujuan = mentah.deletingPathExtension()
+            .appendingPathExtension("frame")
+            .appendingPathExtension("mov")
+
+        Task {
+            do {
+                try await Bingkai.tempel(asal: mentah, tujuan: tujuan)
+                self.berkasBerbingkai = tujuan
+            } catch {
+                // Rekaman mentahnya tetap ada dan tetap dikirim. Kehilangan
+                // hiasan jauh lebih ringan daripada kehilangan ucapan tamu.
+                print("[bingkai] gagal: \(error)")
+                self.berkasBerbingkai = nil
+            }
+            self.sedangMenyusun = false
+        }
+    }
+
     /// Dipanggil tombol "Send Your Wishes".
     func kirim() {
-        guard let berkas = berkasTerakhir else {
+        guard let mentah = berkasTerakhir else {
             kembaliKeAwal()
             return
         }
 
         /*
-         Berkasnya SUDAH tersimpan di folder Dokumen sejak perekaman berhenti.
-
-         Penyalinan ke galeri di sini adalah cadangan kedua, dan kegagalannya
-         tidak boleh menahan tamu berikutnya. Kalau izin galeri ditolak,
-         rekamannya tetap utuh di dalam aplikasi dan bisa ditarik lewat kabel.
+         Berkas mentahnya SUDAH tersimpan di folder Dokumen sejak perekaman
+         berhenti. Penyalinan ke galeri di sini adalah cadangan kedua, dan
+         kegagalannya tidak boleh menahan tamu berikutnya.
          */
         Task {
-            await salinKeGaleri(berkas)
+            // Tunggu penyusunan bingkai kalau memang belum selesai. Batasnya 40
+            // detik: lebih lama dari itu berarti ada yang salah, dan menahan
+            // tamu tanpa batas lebih buruk daripada kehilangan salinan hiasnya.
+            var sabar = 0
+            while sedangMenyusun && sabar < 80 {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                sabar += 1
+            }
+
+            await salinKeGaleri(mentah)
+            if let berbingkai = berkasBerbingkai {
+                await salinKeGaleri(berbingkai)
+            }
             kembaliKeAwal()
         }
     }
@@ -227,6 +273,7 @@ extension Perekam: AVCaptureFileOutputRecordingDelegate {
 
             if selesaiWajar, FileManager.default.fileExists(atPath: outputFileURL.path) {
                 self.berkasTerakhir = outputFileURL
+                self.susunBerbingkai(outputFileURL)
                 self.tahap = .kirim
             } else {
                 self.pesan = "Rekaman gagal. Coba lagi."

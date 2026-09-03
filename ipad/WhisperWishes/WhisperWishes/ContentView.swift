@@ -192,11 +192,20 @@ private struct LayarKirim: View {
                 .foregroundStyle(sapuanEmas)
                 .shadow(color: .unguTua.opacity(0.55), radius: 14, y: 5)
 
-            Text("Tap below to send them to EWALK")
+            Text(perekam.sedangMenyusun
+                 ? "Preparing your video…"
+                 : "Tap below to send them to EWALK")
                 .font(.system(size: 24, weight: .medium, design: .serif))
                 .foregroundStyle(.white.opacity(0.82))
                 .padding(.top, 18)
 
+            /*
+             Tombol tetap bisa ditekan selagi bingkai disusun.
+
+             Penyusunannya hampir selalu selesai duluan; kalaupun belum,
+             `kirim()` yang menunggu — bukan tamu yang dilarang menekan tombol
+             yang jelas-jelas ada di depannya.
+             */
             Button {
                 guard !mengirim else { return }
                 mengirim = true

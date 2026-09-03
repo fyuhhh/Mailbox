@@ -13,16 +13,35 @@ dan kembali ke layar awal.
 | Merekam | 30 detik, penanda merah dan sisa waktu di pojok |
 | Kirim | Tombol emas *Send Your Wishes* → simpan → kembali ke beranda |
 
+## Dua berkas untuk setiap tamu
+
+| Berkas | Isi |
+|---|---|
+| `wish-<waktu>.mov` | rekaman **mentah**, apa adanya dari kamera |
+| `wish-<waktu>.frame.mov` | rekaman **sama** dengan bingkai LED ONE7ELEVEN |
+
+Isinya video dan suara yang persis sama; yang berbeda hanya hiasannya.
+
+Bingkainya **tidak dibakar saat merekam**. AVCaptureMovieFileOutput menulis
+langsung dari kamera ke berkas — jalur paling hemat tenaga yang ada di iOS, dan
+satu-satunya yang bisa dipercaya menulis tiga puluh detik penuh tanpa bingkai
+gambar yang terlewat. Hiasannya ditempelkan sesudahnya, sebagai berkas kedua,
+selagi tamu membaca layar *Send Your Wishes*.
+
+Kalau penempelan bingkai gagal, rekaman mentahnya tetap utuh dan tetap
+tersimpan. Kehilangan hiasan jauh lebih ringan daripada kehilangan ucapannya.
+
 ## Di mana videonya tersimpan
 
 Dua tempat, supaya ada cadangan:
 
-1. **Folder Dokumen aplikasi** — ditulis begitu perekaman berhenti, sebelum
-   tamu menekan tombol apa pun. Bisa ditarik lewat Finder: sambungkan iPad,
-   pilih iPad di sidebar Finder, buka tab **Files**, buka **Whisper Wishes**.
-2. **Galeri Foto** — disalin saat tombol *Send Your Wishes* ditekan.
+1. **Folder Dokumen aplikasi** — mentahnya ditulis begitu perekaman berhenti,
+   sebelum tamu menekan tombol apa pun. Bisa ditarik lewat Finder: sambungkan
+   iPad, pilih iPad di sidebar Finder, buka tab **Files**, buka
+   **Whisper Wishes**.
+2. **Galeri Foto** — keduanya disalin saat tombol *Send Your Wishes* ditekan.
 
-Kalau izin galeri ditolak, rekaman tetap utuh di tempat pertama.
+Kalau izin galeri ditolak, kedua rekaman tetap utuh di tempat pertama.
 
 ## Memasang
 
@@ -52,6 +71,10 @@ memperbaruinya.
 Perekaman **tidak bisa diuji di simulator** — simulator iOS tidak punya kamera
 sama sekali. Yang sudah terbukti: aplikasi terbangun, tertandatangani, berjalan
 lanskap, dan latar serta tulisan emasnya tampil benar.
+
+Penempelan bingkai **sudah diuji terpisah** di macOS dengan video buatan:
+keluarannya 1920×1080, bilah ungu atas dan bawah tertutup bingkai, dan video
+tampil di jendela tengahnya.
 
 Perekaman 30 detik, penyimpanan ke galeri, dan pencerminan kamera depan **harus
 dicoba di iPad sungguhan** — sebaiknya beberapa kali berturut-turut, jauh
