@@ -1,0 +1,43 @@
+# Berkas batch Windows HARUS berakhir baris CRLF.
+#
+# cmd.exe membaca .bat baris demi baris dan menuntut CRLF. Dengan LF saja,
+# blok "if ( ... )" dan sambungan baris "^" pecah menjadi potongan yang dicoba
+# dijalankan sebagai perintah tersendiri. Gejalanya deretan galat yang sama
+# sekali tidak menunjuk ke sebabnya:
+#
+#     'f' is not recognized as an internal or external command
+#     'not' is not recognized as an internal or external command
+#     'M' is not recognized as an internal or external command
+#
+# Bahkan baris "cd /d %~dp0" ikut gagal, sehingga folder kerjanya tetap
+# System32 dan berkas terunduh ke tempat yang salah.
+#
+# Proyek ini disunting di macOS, tempat akhir baris bawaannya LF. Tanpa aturan
+# di bawah, setiap penyuntingan .bat menghasilkan berkas yang rusak di Windows
+# dan tidak ada yang menyadarinya sampai berkasnya diklik di sana.
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+
+# Skrip shell dan berkas kode tetap LF, termasuk saat di-checkout di Windows.
+*.sh       text eol=lf
+*.command  text eol=lf
+*.js       text eol=lf
+*.mjs      text eol=lf
+*.cjs      text eol=lf
+*.json     text eol=lf
+*.html     text eol=lf
+*.css      text eol=lf
+*.md       text eol=lf
+*.txt      text eol=lf
+.env*      text eol=lf
+
+# Berkas biner jangan disentuh sama sekali.
+*.png   binary
+*.jpg   binary
+*.JPG   binary
+*.jpeg  binary
+*.webm  binary
+*.pdf   binary
+*.db    binary
+*.xlsx  binary
