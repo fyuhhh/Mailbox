@@ -22,8 +22,37 @@ let sapuanEmas = LinearGradient(
     endPoint: .bottomTrailing
 )
 
+/*
+ Mode pratinjau untuk membuat tangkapan layar dokumentasi.
+
+ Hanya ada di build DEBUG dan hanya menyala kalau dijalankan dengan argumen
+ `-pratinjau <tahap>`. Simulator iOS tidak punya kamera sama sekali, jadi tanpa
+ jalan pintas ini tidak ada cara melihat layar hitung mundur, layar rekam,
+ maupun layar kirim sebelum ada iPad sungguhan di tangan.
+ */
+enum Pratinjau {
+    static var tahap: Tahap? {
+        #if DEBUG
+        let arg = ProcessInfo.processInfo.arguments
+        guard let i = arg.firstIndex(of: "-pratinjau"), i + 1 < arg.count else { return nil }
+        switch arg[i + 1] {
+        case "beranda": return .beranda
+        case "hitung":  return .hitungMundur
+        case "rekam":   return .merekam
+        case "kirim":   return .kirim
+        default:        return nil
+        }
+        #else
+        return nil
+        #endif
+    }
+}
+
 struct ContentView: View {
     @StateObject private var perekam = Perekam()
+
+    private var tahapTampil: Tahap { Pratinjau.tahap ?? perekam.tahap }
+    private var pratinjau: Bool { Pratinjau.tahap != nil }
 
     var body: some View {
         ZStack {
@@ -32,16 +61,20 @@ struct ContentView: View {
                 .scaledToFill()
                 .ignoresSafeArea()
 
-            switch perekam.tahap {
-            case .beranda:      Beranda(perekam: perekam)
-            case .hitungMundur: Kamera(perekam: perekam) { HitunganBesar(angka: perekam.hitungMundur) }
-            case .merekam:      Kamera(perekam: perekam) { LapisRekam(sisa: perekam.sisaDetik) }
-            case .kirim:        LayarKirim(perekam: perekam)
+            switch tahapTampil {
+            case .beranda:
+                Beranda(perekam: perekam, paksaSiap: pratinjau)
+            case .hitungMundur:
+                Kamera(perekam: perekam, pratinjau: pratinjau) { HitunganBesar(angka: 3) }
+            case .merekam:
+                Kamera(perekam: perekam, pratinjau: pratinjau) { LapisRekam(sisa: pratinjau ? 24 : perekam.sisaDetik) }
+            case .kirim:
+                LayarKirim(perekam: perekam)
             }
         }
         .statusBar(hidden: true)
         .persistentSystemOverlays(.hidden)
-        .task { await perekam.siapkan() }
+        .task { if !pratinjau { await perekam.siapkan() } }
     }
 }
 
@@ -49,6 +82,7 @@ struct ContentView: View {
 
 private struct Beranda: View {
     @ObservedObject var perekam: Perekam
+    var paksaSiap: Bool = false
     @State private var berdenyut = false
 
     var body: some View {
@@ -65,7 +99,7 @@ private struct Beranda: View {
                 .scaleEffect(berdenyut ? 1.03 : 1.0)
                 .animation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true), value: berdenyut)
 
-            Text(perekam.siap ? "Tap anywhere to begin" : "Preparing camera…")
+            Text(paksaSiap || perekam.siap ? "Tap anywhere to begin" : "Preparing camera…")
                 .font(.system(size: 26, weight: .medium, design: .serif))
                 .foregroundStyle(.white.opacity(0.82))
                 .padding(.top, 34)
@@ -94,12 +128,23 @@ private struct Beranda: View {
 
 private struct Kamera<Lapis: View>: View {
     @ObservedObject var perekam: Perekam
+    var pratinjau: Bool = false
     @ViewBuilder var lapis: () -> Lapis
 
     var body: some View {
         ZStack {
-            PratinjauKamera(sesi: perekam.sesi)
-                .ignoresSafeArea()
+            if pratinjau {
+                // Pengganti gambar kamera untuk tangkapan layar dokumentasi.
+                LinearGradient(colors: [Color(white: 0.16), Color(white: 0.30)],
+                               startPoint: .top, endPoint: .bottom)
+                    .ignoresSafeArea()
+                Text("kamera depan")
+                    .font(.system(size: 22, weight: .medium, design: .serif))
+                    .foregroundStyle(.white.opacity(0.28))
+            } else {
+                PratinjauKamera(sesi: perekam.sesi)
+                    .ignoresSafeArea()
+            }
             lapis()
         }
     }
