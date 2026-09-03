@@ -81,12 +81,18 @@ REM  yang terjadi pada percobaan sebelumnya.
 if exist "%~dp0node" rmdir /s /q "%~dp0node"
 if exist "%~dp0node.zip" del /q "%~dp0node.zip"
 
+REM  Unblock-File di ujung perintah menghapus penanda "berkas ini dari
+REM  internet" (Mark of the Web) dari node.exe dan seluruh isi folder node.
+REM  Tanpa itu, Smart App Control di Windows 11 menolak menjalankannya dengan
+REM  pesan "blocked a file that may be unsafe" -- dan kiosk berhenti di situ
+REM  meski unduhannya sendiri berhasil.
+REM
 REM  Seluruh perintah PowerShell ditulis dalam SATU baris.
 REM  Sambungan baris "^" adalah hal pertama yang rusak bila berkas ini pernah
 REM  tersimpan dengan akhir baris yang salah, dan pesan galatnya sama sekali
 REM  tidak menunjuk ke sebabnya. Kutip tunggal dipakai di dalam supaya tidak
 REM  ada tanda kutip yang perlu di-escape.
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $v='%NODEV%'; $u='https://nodejs.org/dist/' + $v + '/node-' + $v + '-win-x64.zip'; Write-Host '   mengunduh dari nodejs.org...'; Invoke-WebRequest -Uri $u -OutFile 'node.zip' -UseBasicParsing; Write-Host '   membuka paket...'; Expand-Archive -Path 'node.zip' -DestinationPath '.' -Force; Rename-Item -Path ('node-' + $v + '-win-x64') -NewName 'node'; Remove-Item 'node.zip' -Force"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $v='%NODEV%'; $u='https://nodejs.org/dist/' + $v + '/node-' + $v + '-win-x64.zip'; Write-Host '   mengunduh dari nodejs.org...'; Invoke-WebRequest -Uri $u -OutFile 'node.zip' -UseBasicParsing; Write-Host '   membuka paket...'; Expand-Archive -Path 'node.zip' -DestinationPath '.' -Force; Rename-Item -Path ('node-' + $v + '-win-x64') -NewName 'node'; Remove-Item 'node.zip' -Force; Get-ChildItem -Path 'node' -Recurse -File | Unblock-File"
 
 if exist "%~dp0node\node.exe" goto UNDUH_BERES
 

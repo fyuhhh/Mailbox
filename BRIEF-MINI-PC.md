@@ -21,7 +21,7 @@ Arsitektur:
 
 ## Langkah
 
-### 1. Tarik repo
+### 1. Tarik repo — pakai `git clone`, JANGAN unduh ZIP
 
 ```
 git clone https://github.com/fyuhhh/Mailbox.git
@@ -30,6 +30,23 @@ git clone https://github.com/fyuhhh/Mailbox.git
 `node_modules` sudah ikut di dalam repo. **Jangan jalankan `npm install`** — tidak
 diperlukan, dan jaringan venue yang tersendat akan membuatnya gagal di saat
 paling buruk.
+
+**Kenapa bukan Download ZIP.** Berkas yang diunduh peramban membawa penanda
+"berasal dari internet" (Mark of the Web). Windows 11 Smart App Control menolak
+menjalankannya:
+
+> Smart App Control blocked a file that may be unsafe
+
+Berkas hasil `git clone` dibuat oleh git, bukan diunduh peramban, jadi tidak
+membawa penanda itu sama sekali dan langsung bisa diklik dua kali.
+
+Kalau terlanjur memakai ZIP: klik kanan berkas **.zip**-nya → **Properties** →
+centang **Unblock** → OK → baru diekstrak. Membuka blokir setelah diekstrak
+harus dilakukan satu per satu pada setiap berkas.
+
+**Jangan menjalankannya sebagai Administrator.** Itu bukan perbaikan, hanya
+menutupi gejalanya, dan membuat berkas data dibuat dengan kepemilikan yang
+menyulitkan nanti.
 
 ### 2. Jalankan
 
