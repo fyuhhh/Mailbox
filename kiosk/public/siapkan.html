@@ -101,6 +101,34 @@ function beres() {
     '<a href="/">Buka kiosk</a></div>';
 }
 
+/*
+ * Kedua kotak bisa diisi lebih dulu lewat tautan.
+ *
+ * Nilainya ditaruh sesudah tanda pagar, bukan sebagai parameter biasa: bagian
+ * sesudah pagar TIDAK PERNAH dikirim ke server mana pun dan tidak tercatat di
+ * log akses siapa pun. Petugas cukup membuka satu tautan dari ponselnya lalu
+ * menekan Simpan — tanpa mengetik empat puluh tiga karakter yang salah satu
+ * hurufnya mudah tertukar antara O besar, o kecil, dan angka nol.
+ */
+(function isiDariTautan() {
+  var pagar = location.hash.replace(/^#/, '');
+  if (!pagar) return;
+
+  var isi = {};
+  pagar.split('&').forEach(function (bagian) {
+    var pisah = bagian.split('=');
+    if (pisah.length < 2) return;
+    try { isi[pisah[0]] = decodeURIComponent(pisah.slice(1).join('=')); } catch (e) {}
+  });
+
+  if (isi.s) document.getElementById('secret').value = isi.s;
+  if (isi.p) document.getElementById('sandi').value = isi.p;
+
+  // Tautan dibersihkan dari bilah alamat supaya nilainya tidak tertinggal
+  // terbaca di layar kiosk yang menghadap ke publik.
+  if (isi.s || isi.p) history.replaceState(null, '', location.pathname);
+})();
+
 fetch('/api/siapkan')
   .then(function (r) { return r.json(); })
   .then(function (d) {

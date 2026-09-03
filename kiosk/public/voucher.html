@@ -50,6 +50,14 @@
 }
 
 .alat button.bahaya { color: var(--bahaya); border-color: rgba(194,56,75,.35); }
+
+/* Memilih berkas, bukan menyunting berkas teks di dalam folder kiosk. */
+.tombol-berkas {
+  display: inline-flex; align-items: center; height: 2.9rem; padding: 0 1.1rem;
+  border: 0; border-radius: .7rem; background: var(--emas); color: #1a1405;
+  font-size: .92rem; font-weight: 800; cursor: pointer;
+}
+.tombol-berkas.sibuk { opacity: .5; pointer-events: none; }
 .alat button:disabled { opacity: .5; }
 
 table { width: 100%; border-collapse: collapse; font-size: .92rem; }
@@ -192,9 +200,14 @@ td.kode { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-weight: 7
   </p>
 
   <div class="alat">
+    <label class="tombol-berkas">
+      Muat kode produksi (.xlsx / .csv / .txt)
+      <input type="file" id="berkas-kode" accept=".xlsx,.csv,.txt" hidden>
+    </label>
     <button type="button" data-segarkan>Segarkan</button>
     <button type="button" class="bahaya" data-reset>Reset semua ke belum keluar</button>
   </div>
+  <p class="catatan" id="kabar-unggah" hidden></p>
 
   <div class="bungkus-tabel">
     <table>
@@ -365,6 +378,59 @@ function gambar(d) {
     isi.append(tr);
   });
 }
+
+document.getElementById('berkas-kode').addEventListener('change', function () {
+  var berkas = this.files && this.files[0];
+  if (!berkas) return;
+
+  /*
+   * Konfirmasi menyebut angka yang sebenarnya, bukan kalimat umum.
+   *
+   * Mengganti persediaan di tengah acara membuat kode yang sudah tercetak dan
+   * dibawa pulang tamu tidak dikenali lagi. Petugas harus melihat berapa yang
+   * sudah keluar sebelum memutuskan.
+   */
+  var terpakai = Number(document.getElementById('n-pakai').textContent) || 0;
+  var peringatan = terpakai
+    ? '\n\nPERHATIAN: ' + terpakai + ' kode sudah keluar ke tamu. Kode itu akan HILANG ' +
+      'dari daftar dan tidak dikenali lagi.'
+    : '';
+
+  if (!confirm('Ganti SELURUH persediaan dengan isi berkas "' + berkas.name + '"?' + peringatan)) {
+    this.value = '';
+    return;
+  }
+
+  var label = this.parentElement;
+  var kabar = document.getElementById('kabar-unggah');
+  label.classList.add('sibuk');
+  kabar.hidden = false;
+  kabar.textContent = 'Mengunggah ' + berkas.name + '…';
+
+  var masukan = this;
+  fetch('/api/promo/unggah', {
+    method: 'POST',
+    headers: {
+      'x-sandi': karcis || '',
+      'x-nama-berkas': berkas.name,
+      'x-ganti': '1',
+      'content-type': 'application/octet-stream',
+    },
+    body: berkas,
+  })
+    .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+    .then(function (h) {
+      if (!h.ok) throw new Error(h.d.galat || 'Gagal memuat berkas.');
+      kabar.textContent = h.d.masuk + ' kode dimuat dari ' + h.d.nama +
+        (h.d.ditolak ? ' (' + h.d.ditolak + ' baris dilewati — judul kolom atau baris kosong)' : '') + '.';
+      muat();
+    })
+    .catch(function (e) { kabar.textContent = 'Gagal: ' + e.message; })
+    .finally(function () {
+      label.classList.remove('sibuk');
+      masukan.value = '';
+    });
+});
 
 document.querySelector('[data-segarkan]').addEventListener('click', muat);
 

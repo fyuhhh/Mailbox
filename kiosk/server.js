@@ -10,7 +10,7 @@ import express from 'express';
 import QRCode from 'qrcode';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { networkInterfaces } from 'node:os';
+import os, { networkInterfaces } from 'node:os';
 import { mkdirSync, existsSync, readFileSync, writeFileSync, renameSync, rmSync, readdirSync, statSync, unlinkSync } from 'node:fs';
 import { randomUUID, randomBytes, timingSafeEqual, createHash } from 'node:crypto';
 import { bukaDb } from './src/db.js';
@@ -922,6 +922,61 @@ app.post('/api/promo/impor', butuhSandi, (req, res) => {
     res.status(400).json({ galat: galat.message });
   }
 });
+
+/**
+ * Unggah berkas kode langsung dari peramban.
+ *
+ * Sebelumnya satu-satunya cara mengganti persediaan adalah menyunting berkas
+ * teks di dalam folder kiosk dengan Notepad. Itu menuntut petugas mencari
+ * folder yang benar, menghindari akhiran .txt ganda yang disembunyikan
+ * Windows, lalu menyalakan ulang kiosk — tiga kesempatan gagal untuk pekerjaan
+ * yang seharusnya cukup memilih berkas.
+ *
+ * Berkas dikirim mentah, bukan lewat form multipart, supaya tidak ada
+ * dependensi baru yang harus ikut dipasang di PC acara.
+ */
+app.post(
+  '/api/promo/unggah',
+  butuhSandi,
+  express.raw({ type: '*/*', limit: '8mb' }),
+  (req, res) => {
+    const nama = String(req.get('x-nama-berkas') || 'kode.txt');
+    const ganti = req.get('x-ganti') === '1';
+
+    if (!Buffer.isBuffer(req.body) || !req.body.length) {
+      return res.status(400).json({ galat: 'Berkas kosong.' });
+    }
+
+    /*
+     * Berkas ditulis ke tempat sementara karena pengurai xlsx memanggil `unzip`
+     * atas sebuah jalur. Menguraikannya dari memori berarti menulis pengurai
+     * zip sendiri — pekerjaan yang jauh lebih besar daripada nilainya di sini.
+     */
+    const akhiran = (path.extname(nama) || '.txt').toLowerCase();
+    const sementara = path.join(os.tmpdir(), `promo-unggah-${randomUUID()}${akhiran}`);
+
+    try {
+      writeFileSync(sementara, req.body);
+      const kode = bacaBerkasKode(sementara);
+
+      /*
+       * Persediaan lama dikosongkan HANYA bila diminta, dan sesudah berkas
+       * berhasil diurai. Mengosongkan lebih dulu berarti berkas yang ternyata
+       * rusak meninggalkan kiosk tanpa kode sama sekali — di tengah acara,
+       * itu jauh lebih buruk daripada persediaan lama yang masih ada.
+       */
+      if (ganti) promo.kosongkan();
+
+      const hasil = promo.impor(kode);
+      console.log(`  [promo] unggah "${nama}": ${hasil.masuk} kode masuk, sisa ${hasil.sisa}`);
+      res.json({ ...hasil, nama, diganti: ganti });
+    } catch (galat) {
+      res.status(400).json({ galat: galat.message });
+    } finally {
+      try { unlinkSync(sementara); } catch { /* sudah hilang */ }
+    }
+  },
+);
 
 app.post('/api/daftar', async (req, res) => {
   const nama = bersihkan(req.body?.nama, BATAS_NAMA);
