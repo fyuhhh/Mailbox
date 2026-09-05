@@ -105,9 +105,18 @@ export function bukaPromo(berkas) {
     sisa: db.prepare('SELECT COUNT(*) AS n FROM promo WHERE dipakai = 0'),
     total: db.prepare('SELECT COUNT(*) AS n FROM promo'),
     milik: db.prepare('SELECT kode FROM promo WHERE dipakai_oleh = ?'),
+    /*
+     * Yang SUDAH keluar didahulukan, terbaru di atas.
+     *
+     * Urutannya semula kebalikannya, dan akibatnya pertanyaan yang paling
+     * sering diajukan petugas — "kode ini tadi diberikan ke siapa" — menuntut
+     * menggulir melewati ratusan kode yang belum terpakai untuk menemukan
+     * segelintir yang sudah.
+     */
     daftar: db.prepare(`
       SELECT kode, dipakai, dipakai_oleh, dipakai_pada FROM promo
-       ORDER BY dipakai, urut LIMIT ?
+       ORDER BY dipakai DESC, dipakai_pada DESC, urut
+       LIMIT ?
     `),
     maksUrut: db.prepare('SELECT COALESCE(MAX(urut), 0) AS n FROM promo'),
   };

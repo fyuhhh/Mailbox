@@ -77,6 +77,11 @@ td { padding: .6rem .7rem; border-bottom: 1px solid rgba(74,53,104,.08); }
 tr:last-child td { border-bottom: 0; }
 
 td.kode { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-weight: 700; }
+td.ke b { display: block; font-size: .92rem; }
+td.ke small { display: block; margin-top: .1rem; font-size: .72rem; color: var(--tinta-redup);
+              font-family: ui-monospace, Menlo, monospace; }
+td.ke.kosong { color: var(--tinta-redup); }
+td.w { white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 .tanda {
   display: inline-block;
@@ -307,7 +312,10 @@ function jam(iso) {
   if (!iso) return '–';
   var d = new Date(iso);
   var p = function (n) { return String(n).padStart(2, '0'); };
-  return p(d.getDate()) + '/' + p(d.getMonth() + 1) + ' ' + p(d.getHours()) + '.' + p(d.getMinutes());
+  // Detik ikut ditampilkan: dua kode bisa keluar dalam menit yang sama, dan
+  // urutan keluarnya justru yang dicari saat ada sengketa.
+  return p(d.getDate()) + '/' + p(d.getMonth() + 1) + ' ' +
+         p(d.getHours()) + '.' + p(d.getMinutes()) + '.' + p(d.getSeconds());
 }
 
 function muatTamu() {
@@ -383,7 +391,26 @@ function gambar(d) {
         (k.dipakai ? 'sudah keluar' : 'belum') + '</span></td>' +
       '<td class="ke"></td><td class="w"></td>';
     tr.querySelector('.kode').textContent = k.kode;
-    tr.querySelector('.ke').textContent = k.dipakai_oleh || '–';
+    /*
+     * Nama tamu di baris utama, kode tamu di bawahnya.
+     *
+     * Petugas mencari "kode ini tadi diberikan ke siapa" — dan jawabannya
+     * adalah nama, bukan kode empat huruf. Kodenya tetap ditampilkan kecil
+     * karena itu yang tercetak di struk, jadi keduanya bisa dicocokkan.
+     */
+    var ke = tr.querySelector('.ke');
+    if (k.dipakai_oleh) {
+      var b = document.createElement('b');
+      b.textContent = k.nama || '(tamu terhapus)';
+      var kecil = document.createElement('small');
+      kecil.textContent = (k.nomor ? 'tamu ke-' + String(k.nomor).padStart(3, '0') + ' · ' : '')
+        + k.dipakai_oleh
+        + (k.memberId ? ' · ' + k.memberId : '');
+      ke.append(b, kecil);
+    } else {
+      ke.textContent = '–';
+      ke.className = 'ke kosong';
+    }
     tr.querySelector('.w').textContent = jam(k.dipakai_pada);
     isi.append(tr);
   });

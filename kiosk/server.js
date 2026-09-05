@@ -961,7 +961,32 @@ app.get('/api/basis/csv', butuhSandi, (req, res) => {
 });
 
 app.get('/api/promo/daftar', butuhSandi, (_req, res) => {
-  res.json({ ...promo.ringkas(), daftar: promo.daftar(200) });
+  /*
+   * Batasnya dinaikkan jauh di atas jumlah kode.
+   *
+   * Sebelumnya 200, sementara persediaannya 205 — lima kode terakhir tidak
+   * pernah muncul di daftar, dan tidak ada apa pun di layar yang memberi tahu
+   * bahwa daftarnya terpotong.
+   */
+  const daftar = promo.daftar(5000).map((k) => {
+    /*
+     * dipakai_oleh menyimpan KODE TAMU, bukan namanya.
+     *
+     * Kode itu benar sebagai kaitan ke catatan tamu, tetapi tidak berarti
+     * apa-apa bagi petugas yang sedang mencari "kode ini tadi diberikan ke
+     * siapa". Namanya diambil dari catatan tamu di sini.
+     */
+    if (!k.dipakai_oleh) return k;
+    const tamu = db.ambilTamu(k.dipakai_oleh);
+    return {
+      ...k,
+      nama: tamu?.nama ?? null,
+      nomor: tamu?.id ?? null,
+      memberId: tamu?.member_id ?? null,
+    };
+  });
+
+  res.json({ ...promo.ringkas(), daftar });
 });
 
 /**
