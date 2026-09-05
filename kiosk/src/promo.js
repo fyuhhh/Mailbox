@@ -27,9 +27,19 @@ export function bacaBerkasKode(berkas) {
   const akhiran = path.extname(berkas).toLowerCase();
 
   if (akhiran === '.csv' || akhiran === '.txt') {
-    return readFileSync(berkas, 'utf8')
-      .split(/\r?\n/)
-      .map((b) => b.split(/[,;\t]/)[0].trim().replace(/^"|"$/g, ''));
+    // Sama seperti xlsx: seluruh kolom dibaca, dan judul kolom di baris pertama
+    // dikenali dari ketiadaan angka.
+    const baris = readFileSync(berkas, 'utf8').split(/\r?\n/);
+    const hasil = [];
+    baris.forEach((b, i) => {
+      for (const bagian of b.split(/[,;\t]/)) {
+        const nilai = bagian.trim().replace(/^"|"$/g, '');
+        if (!nilai) continue;
+        if (i === 0 && !/\d/.test(nilai)) continue;
+        hasil.push(nilai);
+      }
+    });
+    return hasil;
   }
 
   if (akhiran !== '.xlsx') throw new Error(`Format ${akhiran} tidak didukung`);
@@ -57,14 +67,44 @@ export function bacaBerkasKode(berkas) {
 
   const sheet = readFileSync(path.join(sementara, 'xl/worksheets/sheet1.xml'), 'utf8');
   const hasil = [];
+  let barisKe = 0;
+
   for (const [, isi] of sheet.matchAll(/<row[^>]*>(.*?)<\/row>/gs)) {
-    // Hanya kolom pertama; berkas persediaan kode selalu satu kolom.
-    const sel = isi.match(
-      /<c r="A\d+"(?:[^>]*t="([^"]+)")?[^>]*>(?:<v>(.*?)<\/v>|<is><t[^>]*>(.*?)<\/t><\/is>)?<\/c>/s
-    );
-    if (!sel) continue;
-    const [, tipe, v, inline] = sel;
-    hasil.push(tipe === 's' && v !== undefined ? (teks[Number(v)] ?? '') : (inline ?? v ?? ''));
+    barisKe += 1;
+
+    /*
+     * SELURUH kolom dibaca, bukan hanya kolom A.
+     *
+     * Berkas persediaan sempat selalu satu kolom, dan penguraiannya dibuat
+     * menuruti itu. Berkas berikutnya datang dengan tiga kolom — satu jenis
+     * voucher per kolom — dan dua pertiga isinya hilang tanpa suara: yang
+     * terbaca hanya kolom pertama, dan tidak ada apa pun yang memberi tahu
+     * bahwa sisanya diabaikan.
+     */
+    for (const sel of isi.matchAll(
+      /<c r="([A-Z]+)\d+"(?:[^>]*t="([^"]+)")?[^>]*>(?:<v>(.*?)<\/v>|<is><t[^>]*>(.*?)<\/t><\/is>)?<\/c>/gs
+    )) {
+      const [, , tipe, v, inline] = sel;
+      const nilai = String(
+        tipe === 's' && v !== undefined ? (teks[Number(v)] ?? '') : (inline ?? v ?? '')
+      ).trim();
+      if (!nilai) continue;
+
+      /*
+       * Baris pertama yang tidak mengandung angka diperlakukan sebagai judul
+       * kolom, bukan kode.
+       *
+       * "Code", "FUNWORLD", "SELFIETIME", "GIFT" — semuanya lolos pemeriksaan
+       * bentuk kode dan akan masuk sebagai voucher yang tidak pernah bisa
+       * ditukar. Setiap kode sungguhan yang pernah dipakai selalu bercampur
+       * huruf dan angka, jadi ketiadaan angka di baris pertama adalah penanda
+       * yang jauh lebih dapat dipercaya daripada daftar kata terlarang yang
+       * harus ditambah setiap kali ada nama kategori baru.
+       */
+      if (barisKe === 1 && !/\d/.test(nilai)) continue;
+
+      hasil.push(nilai);
+    }
   }
   return hasil;
 }

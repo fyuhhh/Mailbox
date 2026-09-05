@@ -50,7 +50,7 @@ YANG DIURUS SENDIRI OLEH KIOSK
   Node.js         diunduh sendiri kalau belum terpasang
   Printer         dicari sendiri di jaringan, lalu diingat
   Daftar member   ditarik dari server tiap 20 detik
-  Kode voucher    205 kode dimuat sendiri saat pertama jalan
+  Kode voucher    210 kode dimuat sendiri saat pertama jalan
 
 Tidak ada alamat IP yang perlu diketik. Tidak perlu npm install.
 
@@ -63,7 +63,7 @@ Ketuk titik status 3x di layar kiosk, lalu:
   Perangkat        pilih webcam, pilih mikrofon, BICARA sampai meter bergerak,
                    lalu "Cetak struk uji" dan pastikan kertasnya keluar
 
-  Persiapan Acara  pastikan jumlah kode voucher benar (205)
+  Persiapan Acara  pastikan jumlah kode voucher benar (210)
 
   Data Kiosk       panel sinkron harus hijau, sumber HTTPS://UNDANGAN.OPSJOBS.ID
 
@@ -93,7 +93,7 @@ KALAU ADA PERBAIKAN BARU
 
 Unduh ZIP baru, ulangi langkah 1-2 ke FOLDER BARU, lalu jalankan.
 Tidak ada yang perlu disalin. Setelannya sudah tersimpan di PC ini, dan
-205 kode voucher dimuat sendiri.
+210 kode voucher dimuat sendiri.
 
 Folder lama boleh dibiarkan sebagai cadangan.
 
