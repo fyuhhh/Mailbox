@@ -16,7 +16,7 @@ import { randomUUID, randomBytes, timingSafeEqual, createHash } from 'node:crypt
 import { bukaDb } from './src/db.js';
 import { bukaPengaturan } from './src/pengaturan.js';
 import { bukaMember } from './src/member.js';
-import { bukaPromo, bacaBerkasKode } from './src/promo.js';
+import { bukaPromo, bacaBerkasKode, bacaKelompokKode } from './src/promo.js';
 import { bukaBasis } from './src/basis.js';
 import { tanamBenih } from './src/benih.js';
 import { bukaPrinterOtomatis } from './src/printer-otomatis.js';
@@ -1071,7 +1071,7 @@ app.post(
   butuhSandi,
   express.raw({ type: '*/*', limit: '8mb' }),
   (req, res) => {
-    const nama = String(req.get('x-nama-berkas') || 'kode.txt');
+    const namaBerkas = String(req.get('x-nama-berkas') || 'kode.txt');
     const ganti = req.get('x-ganti') === '1';
 
     if (!Buffer.isBuffer(req.body) || !req.body.length) {
@@ -1083,12 +1083,38 @@ app.post(
      * atas sebuah jalur. Menguraikannya dari memori berarti menulis pengurai
      * zip sendiri — pekerjaan yang jauh lebih besar daripada nilainya di sini.
      */
-    const akhiran = (path.extname(nama) || '.txt').toLowerCase();
+    const akhiran = (path.extname(namaBerkas) || '.txt').toLowerCase();
     const sementara = path.join(os.tmpdir(), `promo-unggah-${randomUUID()}${akhiran}`);
+
+    /*
+     * Kelompok yang diminta, dipisah koma. Kosong berarti seluruhnya.
+     *
+     * Berkas persediaan bisa memuat beberapa jenis voucher dalam kolom
+     * terpisah, dan tidak semuanya ikut dibagikan di acara. Tanpa penyaringan
+     * di sini, jenis yang sengaja tidak dipakai tetap masuk — dan baru
+     * ketahuan di kasir.
+     */
+    const diminta = String(req.get('x-kelompok') || '')
+      .split(',').map((x) => x.trim()).filter(Boolean);
 
     try {
       writeFileSync(sementara, req.body);
-      const kode = bacaBerkasKode(sementara);
+
+      const kelompok = bacaKelompokKode(sementara);
+      const nama = Object.keys(kelompok);
+      const dipakai = diminta.length ? nama.filter((n) => diminta.includes(n)) : nama;
+      const kode = dipakai.flatMap((n) => kelompok[n]);
+
+      const rincian = Object.fromEntries(nama.map((n) => [n, kelompok[n].length]));
+
+      /*
+       * Mode intip: hanya melaporkan kelompok yang ada, tanpa menyentuh
+       * persediaan sama sekali. Dipakai halaman untuk bertanya lebih dulu
+       * jenis mana yang akan dipakai.
+       */
+      if (req.get('x-intip') === '1') {
+        return res.json({ intip: true, nama: namaBerkas, kelompok: rincian });
+      }
 
       /*
        * Persediaan lama dikosongkan HANYA bila diminta, dan sesudah berkas
@@ -1099,8 +1125,8 @@ app.post(
       if (ganti) promo.kosongkan();
 
       const hasil = promo.impor(kode);
-      console.log(`  [promo] unggah "${nama}": ${hasil.masuk} kode masuk, sisa ${hasil.sisa}`);
-      res.json({ ...hasil, nama, diganti: ganti });
+      console.log(`  [promo] unggah "${namaBerkas}": ${hasil.masuk} kode masuk (${dipakai.join(', ') || 'semua'}), sisa ${hasil.sisa}`);
+      res.json({ ...hasil, nama: namaBerkas, diganti: ganti, kelompok: rincian, dipakai });
     } catch (galat) {
       res.status(400).json({ galat: galat.message });
     } finally {

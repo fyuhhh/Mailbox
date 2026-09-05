@@ -445,28 +445,68 @@ document.getElementById('berkas-kode').addEventListener('change', function () {
   kabar.textContent = 'Mengunggah ' + berkas.name + '…';
 
   var masukan = this;
-  fetch('/api/promo/unggah', {
-    method: 'POST',
-    headers: {
-      'x-sandi': karcis || '',
-      'x-nama-berkas': berkas.name,
-      'x-ganti': '1',
-      'content-type': 'application/octet-stream',
-    },
-    body: berkas,
-  })
-    .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
-    .then(function (h) {
-      if (!h.ok) throw new Error(h.d.galat || 'Gagal memuat berkas.');
-      kabar.textContent = h.d.masuk + ' kode dimuat dari ' + h.d.nama +
-        (h.d.ditolak ? ' (' + h.d.ditolak + ' baris dilewati — judul kolom atau baris kosong)' : '') + '.';
-      muat();
+
+  /*
+   * Berkas berkolom banyak ditanyakan dulu, tidak dimuat begitu saja.
+   *
+   * Satu berkas bisa memuat beberapa jenis voucher — FUNWORLD, SELFIETIME,
+   * GIFT — dan tidak semuanya ikut dibagikan. Memuat seluruhnya diam-diam
+   * berarti jenis yang sengaja tidak dipakai tetap keluar ke tamu, dan itu
+   * baru ketahuan di kasir.
+   *
+   * Kirim dua kali: yang pertama hanya untuk melihat kelompok apa saja yang
+   * ada, tanpa mengganti apa pun.
+   */
+  kirimBerkas(berkas, null, true).then(function (intip) {
+    var nama = Object.keys(intip.kelompok || {});
+    if (nama.length <= 1) return kirimBerkas(berkas, null, false).then(selesaiUnggah);
+
+    var rincian = nama.map(function (n) { return n + ' (' + intip.kelompok[n] + ')'; }).join('\n  ');
+    var jawab = prompt(
+      'Berkas ini memuat ' + nama.length + ' jenis voucher:\n\n  ' + rincian +
+      '\n\nKetik jenis yang mau dipakai, pisahkan dengan koma.\n' +
+      'Kosongkan lalu OK untuk memakai semuanya.',
+      nama.filter(function (n) { return n !== 'SELFIETIME'; }).join(',')
+    );
+    if (jawab === null) { bersihkan(); return; }
+    return kirimBerkas(berkas, jawab.trim(), false).then(selesaiUnggah);
+  }).catch(function (e) {
+    kabar.textContent = 'Gagal: ' + e.message;
+    bersihkan();
+  });
+
+  function bersihkan() {
+    label.classList.remove('sibuk');
+    masukan.value = '';
+  }
+
+  function selesaiUnggah(h) {
+    kabar.textContent = h.masuk + ' kode dimuat dari ' + h.nama +
+      (h.dipakai && h.dipakai.length ? ' (' + h.dipakai.join(', ') + ')' : '') +
+      (h.ditolak ? ' — ' + h.ditolak + ' baris dilewati' : '') + '.';
+    muat();
+    bersihkan();
+  }
+
+  function kirimBerkas(berkas, kelompok, intipSaja) {
+    return fetch('/api/promo/unggah', {
+      method: 'POST',
+      headers: {
+        'x-sandi': karcis || '',
+        'x-nama-berkas': berkas.name,
+        'x-ganti': intipSaja ? '0' : '1',
+        'x-intip': intipSaja ? '1' : '0',
+        'x-kelompok': kelompok || '',
+        'content-type': 'application/octet-stream',
+      },
+      body: berkas,
     })
-    .catch(function (e) { kabar.textContent = 'Gagal: ' + e.message; })
-    .finally(function () {
-      label.classList.remove('sibuk');
-      masukan.value = '';
-    });
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (h) {
+        if (!h.ok) throw new Error(h.d.galat || 'Gagal memuat berkas.');
+        return h.d;
+      });
+  }
 });
 
 document.querySelector('[data-segarkan]').addEventListener('click', muat);

@@ -23,6 +23,75 @@ import os from 'node:os';
  * menambah dependensi untuk membaca satu kolom teks tidak sepadan dengan
  * ongkos pemeliharaannya.
  */
+/**
+ * Baca kode beserta kelompoknya.
+ *
+ * Berkas persediaan bisa memuat beberapa jenis voucher dalam kolom terpisah,
+ * dengan judul jenisnya di baris pertama. Mengembalikan seluruhnya sebagai
+ * satu tumpukan datar membuat jenis yang tidak dipakai ikut masuk tanpa ada
+ * yang menyadarinya — dan baru ketahuan di kasir, saat tamu menyodorkan kode
+ * jenis yang memang tidak diikutkan dalam acara.
+ *
+ * Bentuknya { NAMA_KELOMPOK: [kode, ...] }. Berkas tanpa judul kolom
+ * mengembalikan satu kelompok bernama "".
+ */
+export function bacaKelompokKode(berkas) {
+  const akhiran = path.extname(berkas).toLowerCase();
+  if (akhiran !== '.xlsx') return { '': bacaBerkasKode(berkas) };
+
+  const { teks, sheet } = bukaLembar(berkas);
+  const judul = {};
+  const kelompok = {};
+  let barisKe = 0;
+
+  for (const [, isi] of sheet.matchAll(/<row[^>]*>(.*?)<\/row>/gs)) {
+    barisKe += 1;
+    for (const sel of isi.matchAll(
+      /<c r="([A-Z]+)\d+"(?:[^>]*t="([^"]+)")?[^>]*>(?:<v>(.*?)<\/v>|<is><t[^>]*>(.*?)<\/t><\/is>)?<\/c>/gs
+    )) {
+      const [, kol, tipe, v, inline] = sel;
+      const nilai = String(
+        tipe === 's' && v !== undefined ? (teks[Number(v)] ?? '') : (inline ?? v ?? '')
+      ).trim();
+      if (!nilai) continue;
+
+      if (barisKe === 1 && !/\d/.test(nilai)) { judul[kol] = nilai; continue; }
+
+      const nama = judul[kol] ?? '';
+      (kelompok[nama] ??= []).push(nilai);
+    }
+  }
+
+  return kelompok;
+}
+
+/** Bongkar xlsx sekali, kembalikan teks bersama dan lembar pertamanya. */
+function bukaLembar(berkas) {
+  const sementara = path.join(os.tmpdir(), `promo-${Date.now()}-${Math.floor(Math.random() * 1e6)}`);
+  mkdirSync(sementara, { recursive: true });
+  execFileSync('unzip', ['-q', '-o', berkas, '-d', sementara]);
+
+  let teks = [];
+  try {
+    const ss = readFileSync(path.join(sementara, 'xl/sharedStrings.xml'), 'utf8');
+    teks = [...ss.matchAll(/<si>(.*?)<\/si>/gs)].map((m) =>
+      [...m[1].matchAll(/<t[^>]*>(.*?)<\/t>/gs)]
+        .map((t) => t[1])
+        .join('')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+    );
+  } catch {
+    // Berkas tanpa sharedStrings memakai nilai inline; ditangani pemanggilnya.
+  }
+
+  const sheet = readFileSync(path.join(sementara, 'xl/worksheets/sheet1.xml'), 'utf8');
+  return { teks, sheet };
+}
+
 export function bacaBerkasKode(berkas) {
   const akhiran = path.extname(berkas).toLowerCase();
 

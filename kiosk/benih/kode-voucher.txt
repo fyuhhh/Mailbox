@@ -1,4 +1,4 @@
-# Kode Gift Voucher — persediaan awal kiosk.
+# Kode Gift Voucher - persediaan awal kiosk.
 #
 # CARA PAKAI
 #   Satu kode satu baris. Baris kosong dan baris berawalan # diabaikan.
@@ -6,66 +6,41 @@
 # KAPAN DIBACA
 #   Sekali saja: saat kiosk pertama kali jalan di sebuah PC dan persediaan
 #   kodenya masih kosong. Menjalankan kiosk berulang kali tidak mengimpor
-#   ulang — kode yang sudah keluar tidak akan kembali jadi "belum terpakai"
+#   ulang - kode yang sudah keluar tidak akan kembali jadi "belum terpakai"
 #   hanya karena kiosk dinyalakan lagi.
 #
-#   Kalau kiosk sudah pernah jalan dan persediaannya mau diganti, pakai
-#   halaman Persiapan Acara: tombol "Muat kode produksi".
+#   Untuk mengganti persediaan pada kiosk yang sudah jalan: halaman
+#   Persiapan Acara - tombol "Muat kode produksi".
 #
 # ISI SEKARANG
-#   210 kode dari "promocode Drop your wish 2026.xlsx", gabungan tiga
-#   kolomnya: 183 FUNWORLD, 7 SELFIETIME, 20 GIFT. Kiosk memperlakukan
-#   ketiganya sama — satu tamu satu kode, siapa pun dapat yang mana saja.
+#   203 kode dari "promocode Drop your wish 2026.xlsx":
+#     183 FUNWORLD + 20 GIFT
 #
-#   Kode Entry Pass lama (awalan at2M) sudah TIDAK BERLAKU dan dibuang.
+#   SELFIETIME (7 kode) sengaja TIDAK diikutkan - jenis itu tidak
+#   dibagikan lewat kiosk ini.
+#
+#   Kode Entry Pass lama (awalan at2M) sudah tidak berlaku dan dibuang.
 
 zt1wAGgNGLFY
-Gz9LPGnqAu4b
-jPN9bnEhnQM2
 zt1wddTxs9Dy
-Gz9LcuLWsxgY
-jPN9JvD9Mv6X
 zt1wqGPdmfxY
-Gz9LxndWxCVu
-jPN9LgPATkhP
 zt1wVvTADV7q
-Gz9LYWHtC3gC
-jPN9tmK3gqV2
 zt1wVyQEx9xr
-Gz9LMDFVu7mM
-jPN9wJ7ehu3c
 zt1wqG9ED9Gm
-Gz9LAVG2rpkE
-jPN9cXwrfJLM
 zt1wRduX2Aum
-Gz9LEFb2WfCK
-jPN9RFbMmJdL
 zt1wGa6KXDFs
-jPN9fepJWfT6
 zt1wFXATG7av
-jPN9t3eW92G2
 zt1wcJbTeTjG
-jPN94N6My7kp
 zt1wEYkMqDJ4
-jPN9rRU2mrgc
 zt1wpDuTU4Ta
-jPN9CasmFJUM
 zt1wEfxCDvU4
-jPN97pxCp2MP
 zt1wksuftkgR
-jPN9bhDK4mGd
 zt1wxnCqsDkK
-jPN9Q6qdYwNQ
 zt1wNvjnagc2
-jPN9Dre9xsQH
 zt1whumbCsqa
-jPN9E2f6AqAA
 zt1w4gbEypRK
-jPN9y2XPF2GV
 zt1w7x2nJ2r9
-jPN9f4GPWmwk
 zt1w3mqREt2k
-jPN9EcsDRYdC
 zt1w6KD9UTJW
 zt1wst2t66me
 zt1wUpLssPn2
@@ -229,3 +204,23 @@ zt1w94Yt6XRf
 zt1wTduEGEHC
 zt1wn24faLyx
 zt1wndDs2jxb
+jPN9bnEhnQM2
+jPN9JvD9Mv6X
+jPN9LgPATkhP
+jPN9tmK3gqV2
+jPN9wJ7ehu3c
+jPN9cXwrfJLM
+jPN9RFbMmJdL
+jPN9fepJWfT6
+jPN9t3eW92G2
+jPN94N6My7kp
+jPN9rRU2mrgc
+jPN9CasmFJUM
+jPN97pxCp2MP
+jPN9bhDK4mGd
+jPN9Q6qdYwNQ
+jPN9Dre9xsQH
+jPN9E2f6AqAA
+jPN9y2XPF2GV
+jPN9f4GPWmwk
+jPN9EcsDRYdC
