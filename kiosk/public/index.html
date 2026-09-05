@@ -188,7 +188,7 @@
     <div class="zona-pajang zona-pajang-tinjau">
       <p class="kelir">Rekamanmu</p>
       <h1 class="judul judul-kecil" id="tinjau-sapaan"></h1>
-      <p class="ajakan">Sudah bagus? Kirim dan strukmu akan tercetak.</p>
+      <p class="ajakan" id="tinjau-ajakan">Sudah bagus? Kirim dan strukmu akan tercetak.</p>
     </div>
 
     <div class="zona-sentuh zona-tinjau">
@@ -196,7 +196,46 @@
       <p class="petunjuk-kecil" id="tinjau-status"></p>
       <div class="aksi">
         <button class="tombol tombol-sunyi" data-aksi="ulangi-rekam">Rekam Ulang</button>
-        <button class="tombol tombol-utama" data-aksi="kirim-rekaman">Kirim &amp; Cetak</button>
+        <button class="tombol tombol-utama" data-aksi="kirim-rekaman" id="tombol-kirim">Kirim &amp; Cetak</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PERSEDIAAN VOUCHER HABIS ============ -->
+  <section class="layar" data-layar="habis" hidden>
+    <div class="zona-pajang">
+      <p class="kelir">Mohon maaf</p>
+      <h1 class="judul judul-kecil">Gift Voucher Sudah Habis</h1>
+      <p class="ajakan">
+        Kamu tetap bisa ikut merekam ucapan untuk <b>EWALK</b>,<br>
+        hanya saja tidak ada voucher yang bisa diberikan lagi.
+      </p>
+    </div>
+
+    <div class="zona-sentuh">
+      <p class="tanya-habis">Tetap lanjutkan?</p>
+      <div class="aksi aksi-tegak">
+        <button class="tombol tombol-utama" data-aksi="habis-lanjut">Ya, Tetap Lanjutkan</button>
+        <button class="tombol tombol-sunyi" data-aksi="habis-tidak">Tidak, Terima Kasih</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= TERIMA KASIH ================= -->
+  <section class="layar layar-tengah" data-layar="terimakasih" hidden>
+    <div>
+      <h1 class="judul">Terima Kasih!</h1>
+      <p class="ajakan" style="margin-top:1.5rem">Sampai jumpa di acara &mdash; selamat menikmati EWALK</p>
+    </div>
+  </section>
+
+  <!-- ============ SELESAI TANPA STRUK ============ -->
+  <section class="layar layar-tengah" data-layar="selesai-rekam" hidden>
+    <div>
+      <h1 class="judul judul-kecil">Terima Kasih!</h1>
+      <p class="ajakan" id="selesai-pesan" style="margin-top:1.2rem">Ucapanmu sudah tersimpan.</p>
+      <div class="aksi" style="margin-top:2.5rem">
+        <button class="tombol tombol-utama" data-aksi="selesai">Selesai <span id="hitung-mundur-2"></span></button>
       </div>
     </div>
   </section>
@@ -204,8 +243,8 @@
   <!-- ================= MEMPROSES ================= -->
   <section class="layar layar-tengah" data-layar="proses" hidden>
     <div class="pemintal"></div>
-    <h2 class="judul-sedang">Mencetak undanganmu…</h2>
-    <p class="ajakan">Ambil struk yang keluar dari mesin</p>
+    <h2 class="judul-sedang" id="proses-judul">Mencetak undanganmu…</h2>
+    <p class="ajakan" id="proses-ajakan">Ambil struk yang keluar dari mesin</p>
   </section>
 
   <!-- ================= HASIL ================= -->

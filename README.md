@@ -1,5 +1,19 @@
 # Kiosk Undangan QR
 
+> ### Mau langsung memakainya di PC acara?
+>
+> 1. **Code → Download ZIP** di atas halaman ini
+> 2. **Klik kanan ZIP → Properties → centang Unblock → OK** &nbsp;&larr; jangan dilewati
+> 3. Extract, lalu klik dua kali **`Jalankan Kiosk.bat`**
+>
+> Langkah 2 wajib. Windows menandai berkas hasil unduhan peramban sebagai
+> "berasal dari internet", dan Windows 11 menolak menjalankannya dengan pesan
+> *Smart App Control blocked a file that may be unsafe*. Membuka blokir pada
+> ZIP-nya sekali membersihkan seluruh isinya; kalau sudah terlanjur diekstrak,
+> hapus foldernya dan ulangi.
+>
+> Selebihnya ada di **[BACA-DULU.txt](BACA-DULU.txt)**.
+
 Tamu mengetik namanya di layar sentuh, struk ber-QR langsung tercetak, dan QR
 itu membuka undangan digital berisi namanya sendiri.
 

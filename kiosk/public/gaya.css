@@ -232,6 +232,15 @@ html[data-putar="270"] .tirai { transform: rotate(-90deg); }
   justify-items: center;
   gap: 2rem;
   text-align: center;
+
+  /*
+   * Ruang untuk lambang yang tercetak di gambar latar.
+   *
+   * Layar bertumpuk-tengah tidak memakai .zona-pajang, jadi ia tidak mewarisi
+   * jarak atas yang menjauhkan tulisan dari lambang ONE7ELEVEN. Tanpa ini,
+   * judulnya menempel di puncak layar dan bertindihan dengan lambangnya.
+   */
+  padding: 16rem 3rem 8rem;
 }
 
 @keyframes masuk {
@@ -1203,3 +1212,20 @@ a.tombol {
 }
 
 .panel-catatan.buruk { color: var(--bahaya); font-weight: var(--b-tegas); }
+
+/* =============================================================================
+   PERSEDIAAN VOUCHER HABIS
+   ========================================================================== */
+
+.tanya-habis {
+  margin: 0 0 var(--s-4);
+  font-size: var(--t-lg);
+  font-weight: var(--b-judul);
+  text-align: center;
+  color: var(--ungu-tua);
+}
+
+/* Dua pilihan ditumpuk, bukan berjajar. Tamu harus membaca keduanya sebelum
+   memilih; berjajar membuat yang satu tampak sebagai tombol batal biasa. */
+.aksi-tegak { flex-direction: column; }
+.aksi-tegak .tombol { width: 100%; }

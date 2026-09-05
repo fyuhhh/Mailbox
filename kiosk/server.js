@@ -1043,7 +1043,19 @@ app.post(
 app.post('/api/daftar', async (req, res) => {
   const nama = bersihkan(req.body?.nama, BATAS_NAMA);
   const pesan = bersihkan(req.body?.pesan, BATAS_PESAN);
-  const jenis = req.body?.jenis === 'voucher' ? 'voucher' : 'undangan';
+  /*
+   * Tiga jenis, bukan dua.
+   *
+   * "tanpaHadiah" dipakai ketika persediaan voucher habis dan tamu memilih
+   * tetap ikut merekam. Ucapannya tersimpan seperti biasa, tetapi tidak ada
+   * kode yang diambil dan tidak ada kertas yang keluar — mencetak struk yang
+   * tidak bisa ditukar apa pun hanya membuat tamu mengantre di kasir untuk
+   * ditolak.
+   */
+  const jenisMinta = req.body?.jenis;
+  const jenis = jenisMinta === 'voucher' ? 'voucher'
+    : jenisMinta === 'tanpaHadiah' ? 'tanpaHadiah'
+    : 'undangan';
   const memberId = bersihkan(req.body?.memberId, 40) || null;
 
   if (nama.length < 2) {
@@ -1057,7 +1069,7 @@ app.post('/api/daftar', async (req, res) => {
    * tombol "Ketik Manual" melewati layar itu sepenuhnya — dan yang menentukan
    * apakah voucher kedua keluar adalah permintaan ini, bukan tampilan.
    */
-  if (jenis === 'voucher' && memberId) {
+  if (jenis === 'voucher' && memberId) {   // eslint-disable-line
     const sudah = db.voucherMember(memberId);
     if (sudah) {
       return res.status(409).json({
@@ -1107,7 +1119,7 @@ app.post('/api/daftar', async (req, res) => {
    * menolak di sini berarti menahan orang yang sudah mengantre dan merekam.
    */
   let kodePromo = null;
-  if (tamu.jenis === 'voucher') {
+  if (tamu.jenis === 'voucher') {   // tanpaHadiah sengaja tidak masuk sini
     try {
       kodePromo = promo.ambilUntuk(tamu.kode);
       if (!kodePromo) console.warn('  [promo] persediaan habis — struk dicetak tanpa kode');
@@ -1117,10 +1129,16 @@ app.post('/api/daftar', async (req, res) => {
   }
   tamu = { ...tamu, kodePromo };
 
-  // Cetak dan unggah berjalan bersamaan: tamu tidak perlu menunggu jaringan,
-  // dan halaman undangannya sudah aktif saat ia mengangkat struk.
+  /*
+   * Yang tanpa hadiah tidak dicetak sama sekali.
+   *
+   * Ucapannya tetap dikirim ke server undangan — video itulah yang jadi bahan
+   * acara, dan justru itu satu-satunya alasan tamu diminta tetap merekam.
+   */
   const [hasilCetak] = await Promise.all([
-    mulaiCetak(tamu),
+    tamu.jenis === 'tanpaHadiah'
+      ? Promise.resolve({ diterima: false, dilewati: true })
+      : mulaiCetak(tamu),
     sinkron.kirimSegera(tamu),
   ]);
 
@@ -1136,7 +1154,13 @@ app.post('/api/daftar', async (req, res) => {
    */
   const isiQr = tamu.jenis === 'voucher' && kodePromo ? kodePromo : url;
 
-  const qr = await QRCode.toDataURL(isiQr, {
+  /*
+   * Tanpa hadiah berarti tanpa apa pun untuk dipindai.
+   *
+   * Membuat QR undangan di sini akan memancing tamu memindainya, membuka
+   * halaman undangan, lalu mengira ia tetap mendapat sesuatu.
+   */
+  const qr = tamu.jenis === 'tanpaHadiah' ? null : await QRCode.toDataURL(isiQr, {
     errorCorrectionLevel: 'M',
     margin: 2,
     scale: 12,
@@ -1457,7 +1481,15 @@ async function tarikMember() {
   }
 }
 
-const pemantauMember = setInterval(tarikMember, 2 * 60 * 1000);
+/*
+ * Daftar member ditarik tiap 20 detik.
+ *
+ * Sebelumnya dua menit. Pihak ketiga masih mengirim data sampai hari acara,
+ * dan member yang baru didaftarkan lalu langsung datang ke kiosk akan ditolak
+ * selama sisa dua menit itu — di depan antrean, tanpa cara memperbaikinya
+ * selain menunggu.
+ */
+const pemantauMember = setInterval(tarikMember, 20 * 1000);
 pemantauMember.unref?.();
 tarikMember();
 

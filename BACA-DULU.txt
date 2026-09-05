@@ -1,0 +1,90 @@
+KIOSK HUT EWALK 17-TH
+=====================
+
+CARA MENJALANKAN — TIGA LANGKAH
+-------------------------------
+
+  1. Klik kanan berkas ZIP yang baru diunduh -> Properties
+     Centang "Unblock" di bagian bawah -> OK
+
+     JANGAN DILEWATI. Windows menandai semua berkas yang diunduh peramban
+     sebagai "berasal dari internet", dan Windows 11 menolak menjalankannya:
+
+         Smart App Control blocked a file that may be unsafe
+
+     Membuka blokir pada ZIP-nya sekali akan membersihkan seluruh isinya.
+     Kalau terlanjur diekstrak duluan, hapus foldernya lalu ulangi dari sini.
+
+  2. Klik kanan ZIP -> Extract All -> pilih C:\kiosk-ewalk -> Extract
+
+  3. Buka foldernya, klik dua kali:
+
+         Jalankan Kiosk.bat
+
+     Jendela hitam terbuka dan peramban menyala sendiri. Jendela itu HARUS
+     dibiarkan terbuka selama acara; menutupnya mematikan kiosk.
+
+
+PENYIAPAN — SEKALI SEUMUR PC INI
+--------------------------------
+
+Peramban akan terbuka di halaman Penyiapan yang meminta dua isian. Tempel
+tautan yang diberikan pemilik proyek ke bilah alamat peramban itu — kedua
+kotak akan terisi sendiri. Tekan Simpan.
+
+Setelah itu halaman tersebut tidak muncul lagi.
+
+
+YANG DIURUS SENDIRI OLEH KIOSK
+------------------------------
+
+  Node.js         diunduh sendiri kalau belum terpasang
+  Printer         dicari sendiri di jaringan, lalu diingat
+  Daftar member   ditarik dari server tiap 20 detik
+  Kode voucher    205 kode dimuat sendiri saat pertama jalan
+
+Tidak ada alamat IP yang perlu diketik. Tidak perlu npm install.
+
+
+SEBELUM ACARA — WAJIB DIPERIKSA
+-------------------------------
+
+Ketuk titik status 3x di layar kiosk, lalu:
+
+  Perangkat        pilih webcam, pilih mikrofon, BICARA sampai meter bergerak,
+                   lalu "Cetak struk uji" dan pastikan kertasnya keluar
+
+  Persiapan Acara  pastikan jumlah kode voucher benar (205)
+
+  Data Kiosk       panel sinkron harus hijau, sumber HTTPS://UNDANGAN.OPSJOBS.ID
+
+Lalu cetak satu struk percobaan dan pindai QR-nya dengan ponsel memakai
+DATA SELULER, bukan WiFi venue. Kalau memakai WiFi yang sama, alamat yang
+salah pun akan terbuka dan kamu akan mengira sudah beres.
+
+Terakhir: Persiapan Acara -> "Reset nomor tamu ke 001".
+
+
+KALAU KODE VOUCHER HABIS
+------------------------
+
+Kiosk otomatis menawarkan pilihan ke tamu:
+
+  "Tetap lanjutkan?"
+
+  Ya    -> tamu tetap bisa scan QR PAM-PLUS, konfirmasi data, dan merekam
+           ucapan. Tidak ada struk yang keluar dan tidak ada kode diberikan.
+  Tidak -> layar ucapan terima kasih, lalu kembali ke awal.
+
+Tidak ada yang perlu diatur petugas; ini terjadi sendiri begitu kode habis.
+
+
+KALAU ADA PERBAIKAN BARU
+------------------------
+
+Unduh ZIP baru, ulangi langkah 1-2 ke folder BARU, lalu salin dari folder lama:
+
+  kiosk\data\      seluruh folder (tamu, kode terpakai, rekaman video)
+  kiosk\.env       berkas setelan
+
+Atau pakai git supaya cukup "git pull" — lihat BRIEF-MINI-PC.md.

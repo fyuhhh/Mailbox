@@ -45,6 +45,7 @@ let batasAtur = {};
 const keadaan = {
   layar: 'pilih',
   jalur: 'tamu',        // 'tamu' | 'member'
+  tanpaHadiah: false,   // benar bila persediaan habis dan tamu tetap lanjut
   nama: '',
   memberId: null,
   nomorHp: '',
@@ -150,7 +151,7 @@ function mulaiUlang() {
   lepasKamera();
 
   Object.assign(keadaan, {
-    jalur: 'tamu', nama: '', memberId: null, nomorHp: '',
+    jalur: 'tamu', tanpaHadiah: false, nama: '', memberId: null, nomorHp: '',
     videoId: null, videoMentahId: null,
     blobRekaman: null, blobMentah: null, kodeTerakhir: null,
   });
@@ -195,7 +196,18 @@ function mulaiUlang() {
     // Layar diperiksa lagi karena janji ini selesai setelah beberapa ratus
     // milidetik; dalam jeda itu tamu bisa saja sudah menekan sesuatu, dan
     // menariknya kembali ke kamera akan terasa seperti kiosk yang membantah.
-    if (Number(atur.hanyaMember) === 1 && keadaan.layar === 'pilih') mulaiPindaiMember();
+    if (keadaan.layar !== 'pilih') return;
+
+    /*
+     * Persediaan habis ditanyakan LEBIH DULU, sebelum kamera menyala.
+     *
+     * Membiarkan tamu memindai kartunya, merekam lima belas detik, lalu baru
+     * memberi tahu tidak ada voucher adalah cara terburuk menyampaikannya.
+     * Pilihannya diberikan di depan, saat ia belum mengeluarkan apa pun.
+     */
+    if (sisaVoucher === 0) return keLayar('habis');
+
+    if (Number(atur.hanyaMember) === 1) mulaiPindaiMember();
   });
 }
 
@@ -205,7 +217,11 @@ function aturJedaDiam() {
   clearTimeout(jedaDiam);
   // Layar yang punya hitungannya sendiri, atau yang memang menunggu manusia
   // bergerak, tidak boleh direset di tengah jalan oleh pewaktu ini.
-  if (['pilih', 'hasil', 'rekam', 'siap', 'proses'].includes(keadaan.layar)) return;
+  // Layar 'habis' menunggu keputusan manusia, 'terimakasih' dan
+  // 'selesai-rekam' punya pewaktu sendiri — semuanya tidak boleh direset di
+  // tengah jalan oleh pewaktu diam.
+  if (['pilih', 'hasil', 'rekam', 'siap', 'proses',
+       'habis', 'terimakasih', 'selesai-rekam'].includes(keadaan.layar)) return;
 
   /*
    * Di mode khusus member, layar pindai ADALAH layar awal.
@@ -413,6 +429,7 @@ function lepasKamera() {
 
 let pemindaiMember = null;
 let jedaTolakMember = null;
+let jedaTerimaKasih = null;
 let lanjutkanPindai = null;
 
 async function mulaiPindaiMember() {
@@ -934,6 +951,24 @@ function bebaskanPemutar() {
 }
 
 function keTinjau() {
+  /*
+   * Tulisan disesuaikan supaya tidak menjanjikan struk yang tidak akan keluar.
+   *
+   * "Kirim & Cetak" pada alur tanpa hadiah membuat tamu menunggu di depan
+   * printer yang memang tidak akan mengeluarkan apa pun.
+   */
+  const ajakan = $('#tinjau-ajakan');
+  const tombol = $('#tombol-kirim');
+  if (ajakan && tombol) {
+    if (keadaan.tanpaHadiah) {
+      ajakan.textContent = 'Sudah bagus? Kirim ucapanmu untuk EWALK.';
+      tombol.textContent = 'Kirim Ucapan';
+    } else {
+      ajakan.textContent = 'Sudah bagus? Kirim dan strukmu akan tercetak.';
+      tombol.textContent = 'Kirim & Cetak';
+    }
+  }
+
   bebaskanPemutar();
 
   urlPemutar = URL.createObjectURL(keadaan.blobRekaman);
@@ -997,6 +1032,14 @@ async function unggahRekaman() {
 /* ================================== KIRIM ================================= */
 
 async function kirim() {
+  // Layar proses juga tidak boleh menyebut cetakan pada alur tanpa hadiah.
+  const jd = $('#proses-judul');
+  const aj = $('#proses-ajakan');
+  if (jd && aj) {
+    jd.textContent = keadaan.tanpaHadiah ? 'Menyimpan ucapanmu…' : 'Mencetak undanganmu…';
+    aj.textContent = keadaan.tanpaHadiah ? 'Sebentar saja' : 'Ambil struk yang keluar dari mesin';
+  }
+
   keLayar('proses');
 
   let data;
@@ -1006,7 +1049,8 @@ async function kirim() {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         nama: keadaan.nama.trim(),
-        jenis: keadaan.jalur === 'member' ? 'voucher' : 'undangan',
+        jenis: keadaan.tanpaHadiah ? 'tanpaHadiah'
+             : keadaan.jalur === 'member' ? 'voucher' : 'undangan',
         memberId: keadaan.memberId,
         videoId: keadaan.videoId,
         videoMentahId: keadaan.videoMentahId,
@@ -1032,6 +1076,21 @@ async function kirim() {
   }
 
   keadaan.kodeTerakhir = data.kode;
+
+  /*
+   * Tanpa hadiah berhenti di sini.
+   *
+   * Tidak ada QR, tidak ada kode, tidak ada struk — jadi layar hasil yang
+   * seluruh isinya tentang ketiga hal itu tidak punya apa pun untuk
+   * ditampilkan. Tamu diberi ucapan terima kasih, lalu kiosk kembali sendiri.
+   */
+  if (keadaan.tanpaHadiah) {
+    $('#selesai-pesan').textContent = 'Ucapanmu sudah tersimpan. Terima kasih sudah ikut merayakan!';
+    keLayar('selesai-rekam');
+    mulaiHitungMundur('#hitung-mundur-2');
+    return;
+  }
+
   $('#hasil-nama').textContent = data.nama;
   $('#hasil-qr').src = data.qr;
 
@@ -1094,10 +1153,12 @@ function pantauCetak(kode) {
 let timerMundur = null;
 let timerJeda = null;
 
-function mulaiHitungMundur() {
+function mulaiHitungMundur(sasaran = '#hitung-mundur') {
   clearInterval(timerMundur);
   let sisa = atur.hasilDetik;
-  const label = $('#hitung-mundur');
+  // Layar penutup tanpa struk memakai labelnya sendiri; keduanya berbagi
+  // pewaktu yang sama supaya tidak ada dua hitungan berjalan bersamaan.
+  const label = $(sasaran) ?? $('#hitung-mundur');
   label.textContent = `(${sisa})`;
 
   timerMundur = setInterval(() => {
@@ -1157,6 +1218,7 @@ function hentikanSemuaTimer() {
   }
   clearTimeout(jedaDiam);
   clearTimeout(jedaTolakMember);
+  clearTimeout(jedaTerimaKasih);
   if (perekam?.state === 'recording') {
     // Lepas penangan sebelum berhenti: onstop yang tersisa akan melompat ke
     // layar tinjau tepat setelah kiosk direset untuk tamu berikutnya.
@@ -1245,6 +1307,9 @@ async function muatPengaturan() {
  * Saat kiosk dikhususkan untuk pemegang kartu, tamu umum harus tahu itu
  * SEBELUM mengantre — bukan setelah mengetik nama dan merekam video.
  */
+/// Sisa voucher terakhir yang diketahui. null berarti belum pernah terbaca.
+let sisaVoucher = null;
+
 async function terapkanModeMember() {
   const kartuTamu = $('#kartu-tamu');
   const ajakan = $('#ajakan-pilih');
@@ -1265,6 +1330,8 @@ async function terapkanModeMember() {
 
   if (!khusus) {
     ajakan.innerHTML = 'Rekam video ucapanmu untuk <b>EWALK</b><br>dan bawa pulang undanganmu sendiri';
+    // Sisa tetap dibaca: layar "habis" berlaku di kedua mode.
+    try { sisaVoucher = (await (await fetch('/api/promo')).json()).sisa; } catch { /* biarkan */ }
     return;
   }
 
@@ -1273,6 +1340,7 @@ async function terapkanModeMember() {
   let n = null;
   try {
     n = (await (await fetch('/api/promo')).json()).sisa;
+    sisaVoucher = n;
   } catch {
     // Angka tidak bisa diambil; baris sisa dibiarkan apa adanya daripada
     // menampilkan angka yang mungkin salah.
@@ -1450,6 +1518,23 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'jalur-tamu':
         keadaan.jalur = 'tamu';
         return lanjutKeNama();
+      case 'habis-lanjut':
+        /*
+         * Lanjut tanpa hadiah. Alurnya sama persis sampai selesai merekam;
+         * yang berbeda hanya di ujungnya — tidak ada kode diambil dan tidak
+         * ada kertas keluar.
+         */
+        keadaan.tanpaHadiah = true;
+        return mulaiPindaiMember();
+
+      case 'habis-tidak':
+        keLayar('terimakasih');
+        // Kembali sendiri supaya tamu berikutnya tidak menemukan layar ucapan
+        // terima kasih milik orang sebelumnya.
+        clearTimeout(jedaTerimaKasih);
+        jedaTerimaKasih = setTimeout(mulaiUlang, 4000);
+        return;
+
       case 'jalur-member':
         return mulaiPindaiMember();
       case 'batal-member':
