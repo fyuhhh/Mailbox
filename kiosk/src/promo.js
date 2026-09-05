@@ -32,6 +32,18 @@ export function bacaBerkasKode(berkas) {
     const baris = readFileSync(berkas, 'utf8').split(/\r?\n/);
     const hasil = [];
     baris.forEach((b, i) => {
+      /*
+       * Baris komentar dibuang UTUH, sebelum dipotong per kolom.
+       *
+       * Berkas benih menuliskan aturan ini di kepalanya sendiri, tetapi
+       * penguraiannya tidak pernah menjalankannya: baris komentar hanya gagal
+       * secara kebetulan karena mengandung spasi. Begitu sebuah kalimat
+       * mengandung koma, potongan sesudahnya bisa berupa satu kata tanpa spasi
+       * — dan satu kata seperti "pakai" lolos sebagai kode voucher, lalu
+       * tercetak di struk tamu yang kasir tidak akan mengenalinya.
+       */
+      if (b.trim().startsWith('#')) return;
+
       for (const bagian of b.split(/[,;\t]/)) {
         const nilai = bagian.trim().replace(/^"|"$/g, '');
         if (!nilai) continue;
