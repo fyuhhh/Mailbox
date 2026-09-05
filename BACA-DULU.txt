@@ -32,7 +32,16 @@ Peramban akan terbuka di halaman Penyiapan yang meminta dua isian. Tempel
 tautan yang diberikan pemilik proyek ke bilah alamat peramban itu — kedua
 kotak akan terisi sendiri. Tekan Simpan.
 
-Setelah itu halaman tersebut tidak muncul lagi.
+Setelah itu halaman tersebut tidak muncul lagi, DAN tidak akan muncul lagi
+untuk folder kiosk mana pun di PC ini.
+
+Setelannya disimpan di tingkat PC, bukan di dalam folder:
+
+    Windows :  %APPDATA%\KioskEwalk\setelan.env
+
+Jadi kalau nanti ada perbaikan, kamu cukup mengunduh ZIP baru dan
+mengekstraknya ke FOLDER BARU. Tidak perlu menyalin apa pun dari folder
+lama — kiosk membaca setelannya sendiri dan langsung jalan.
 
 
 YANG DIURUS SENDIRI OLEH KIOSK
@@ -82,9 +91,16 @@ Tidak ada yang perlu diatur petugas; ini terjadi sendiri begitu kode habis.
 KALAU ADA PERBAIKAN BARU
 ------------------------
 
-Unduh ZIP baru, ulangi langkah 1-2 ke folder BARU, lalu salin dari folder lama:
+Unduh ZIP baru, ulangi langkah 1-2 ke FOLDER BARU, lalu jalankan.
+Tidak ada yang perlu disalin. Setelannya sudah tersimpan di PC ini, dan
+205 kode voucher dimuat sendiri.
 
-  kiosk\data\      seluruh folder (tamu, kode terpakai, rekaman video)
-  kiosk\.env       berkas setelan
+Folder lama boleh dibiarkan sebagai cadangan.
+
+  CATATAN: folder baru berarti daftar tamu mulai dari 001 lagi, dan rekaman
+  video di folder lama TETAP ADA di folder lama. Kalau acara sudah berjalan
+  dan kamu ingin melanjutkan data yang sama, salin folder  kiosk\data\
+  dari yang lama ke yang baru — tetapi kalau itu dilakukan, kode voucher
+  juga ikut yang lama.
 
 Atau pakai git supaya cukup "git pull" — lihat BRIEF-MINI-PC.md.

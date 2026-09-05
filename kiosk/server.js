@@ -46,8 +46,32 @@ const AKAR = path.dirname(fileURLToPath(import.meta.url));
  * kesalahan. Tanpa penjaga ini kiosk mati sebelum sempat menampilkan halaman
  * penyiapan yang justru dibuat untuk keadaan itu.
  */
-for (const berkas of ['.env', '.env.default']) {
-  try { process.loadEnvFile?.(path.join(AKAR, berkas)); } catch { /* belum ada */ }
+/**
+ * Tempat setelan rahasia disimpan di tingkat MESIN, bukan folder.
+ *
+ * Folder kiosk sering disalin ulang: unduh ZIP baru, extract ke folder baru,
+ * jalankan. Kalau rahasianya hanya hidup di dalam folder, setiap folder baru
+ * menuntut penyiapan ulang — dan orang yang mengerjakannya di lokasi belum
+ * tentu memegang nilainya.
+ *
+ * Dengan disimpan di tingkat mesin, penyiapan cukup sekali seumur PC itu.
+ */
+function berkasSetelanMesin() {
+  const dasar = process.platform === 'win32'
+    ? (process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'))
+    : path.join(os.homedir(), 'Library', 'Application Support');
+  return path.join(dasar, 'KioskEwalk', 'setelan.env');
+}
+
+/*
+ * Urutan menentukan siapa yang menang.
+ *
+ * loadEnvFile TIDAK menimpa nilai yang sudah ada, jadi yang dimuat lebih dulu
+ * berlaku. Urutannya: .env milik folder ini, lalu simpanan mesin, lalu nilai
+ * bawaan yang ikut di penyimpanan kode. Ketiganya boleh tidak ada.
+ */
+for (const berkas of [path.join(AKAR, '.env'), berkasSetelanMesin(), path.join(AKAR, '.env.default')]) {
+  try { process.loadEnvFile?.(berkas); } catch { /* belum ada */ }
 }
 
 /**
@@ -832,7 +856,27 @@ app.post('/api/siapkan', (req, res) => {
  * diam-diam membuang apa pun yang tidak dikenali kode ini.
  */
 function tulisEnv(nilai) {
-  const berkas = path.join(AKAR, '.env');
+  /*
+   * Ditulis ke DUA tempat: folder ini, dan simpanan tingkat mesin.
+   *
+   * Yang di folder membuat kiosk ini langsung jalan. Yang di tingkat mesin
+   * membuat folder berikutnya — hasil unduhan ZIP yang baru — tidak perlu
+   * disiapkan lagi sama sekali.
+   */
+  tulisSatuEnv(path.join(AKAR, '.env'), nilai);
+
+  try {
+    const mesin = berkasSetelanMesin();
+    mkdirSync(path.dirname(mesin), { recursive: true });
+    tulisSatuEnv(mesin, nilai);
+    console.log(`  [siapkan] disimpan juga di ${mesin}`);
+  } catch (galat) {
+    // Bukan kegagalan: kiosk ini tetap jalan dengan .env di foldernya sendiri.
+    console.warn('  [siapkan] simpanan tingkat mesin gagal ditulis:', galat.message);
+  }
+}
+
+function tulisSatuEnv(berkas, nilai) {
   let baris = [];
   try {
     baris = readFileSync(berkas, 'utf8').split(/\r?\n/);
