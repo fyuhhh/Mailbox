@@ -18,8 +18,17 @@ const AKAR = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const DATA = path.join(AKAR, 'data');
 const BENIH = path.join(AKAR, 'benih');
 
-// Berkas yang harus sudah terisi di PC baru sebelum acara.
-const IKUT = ['member.db', 'promo.db', 'pengaturan.json'];
+/*
+ * Berkas yang harus sudah terisi di PC baru sebelum acara.
+ *
+ * promo.db SENGAJA TIDAK IKUT. Kode voucher punya satu sumber saja:
+ * benih/kode-voucher.txt. Kalau promo.db ikut ditanam, ia menang — kiosk
+ * hanya membaca berkas teks itu ketika persediaannya masih kosong, sehingga
+ * PC baru terisi kode dari salinan basis data yang mungkin sudah usang, dan
+ * kode di berkas teks tidak pernah dibaca sama sekali. Dua sumber untuk satu
+ * hal selalu berakhir dengan yang salah yang dipakai.
+ */
+const IKUT = ['member.db', 'pengaturan.json'];
 
 mkdirSync(BENIH, { recursive: true });
 
